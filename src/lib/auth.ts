@@ -11,6 +11,28 @@ export const auth = betterAuth({
     provider: "pg",
     schema: { ...schema }
   }),
+  rateLimit: {
+    enabled: true, // Development mode 
+    storage: "database",
+    modelName: "rateLimit", 
+    window: 60,          // Default window: 1 minute
+    max: 100,            // Default limit: 100 requests per window
+    customRules: {
+      "/sign-in/email": {
+        window: 60,
+        max: 5,      // Only 5 login attempts per minute to stop brute-forcing
+      },
+      "/sign-up/email": {
+        window: 3600,
+        max: 3,      // Anti-bot: Only 3 sign-ups per hour per IP
+      }
+    }
+  },
+  advanced: {
+    ipAddress: {
+      ipv6Subnet: 64, // Rate limit by /64 subnet instead of individual addresses into 1 rate limit bucket
+    },
+  },
   emailAndPassword: {
     enabled: true,
   },

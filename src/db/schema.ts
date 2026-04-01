@@ -9,6 +9,8 @@ import {
   pgEnum,
   real,
   integer,
+  varchar,
+  bigint,
 } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 
@@ -207,6 +209,13 @@ export const invitation = pgTable(
     index("invitation_email_idx").on(table.email),
   ],
 );
+
+export const rateLimit = pgTable("rate_limit", {
+	id: text("id").primaryKey(),
+	key: varchar("key", { length: 255 }).notNull().unique(),
+	count: integer("count").notNull(),
+	lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+});
 
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),

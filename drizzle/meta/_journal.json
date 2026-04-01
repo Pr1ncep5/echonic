@@ -15,6 +15,13 @@
       "when": 1774961417970,
       "tag": "0001_lush_gideon",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1775070826109,
+      "tag": "0002_married_ben_grimm",
+      "breakpoints": true
     }
   ]
 }
