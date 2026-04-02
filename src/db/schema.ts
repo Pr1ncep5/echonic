@@ -7,10 +7,10 @@ import {
   index,
   uniqueIndex,
   pgEnum,
-  real,
   integer,
   varchar,
   bigint,
+  doublePrecision,
 } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 
@@ -49,10 +49,10 @@ export const generation = pgTable("generation", {
   voiceName: text("voice_name").notNull(),
   r2ObjectKey: text("r2_object_key"),
 
-  temperature: real("temperature").notNull(),
-  topP: real("top_p").notNull(),
+  temperature: doublePrecision("temperature").notNull(),
+  topP: doublePrecision("top_p").notNull(),
   topK: integer("top_k").notNull(),
-  repetitionPenalty: real("repetition_penalty").notNull(),
+  repetitionPenalty: doublePrecision("repetition_penalty").notNull(),
 
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
@@ -161,9 +161,9 @@ export const organization = pgTable(
   {
     id: text("id").primaryKey(),
     name: text("name").notNull(),
-    slug: text("slug").notNull().unique(),
+    slug: varchar("slug", { length: 255 }).notNull().unique(),
     logo: text("logo"),
-    createdAt: timestamp("created_at").notNull(),
+    createdAt: timestamp("created_at", { precision: 6, withTimezone: true }).defaultNow().notNull(),
     metadata: text("metadata"),
   },
   (table) => [uniqueIndex("organization_slug_uidx").on(table.slug)],
@@ -180,7 +180,7 @@ export const member = pgTable(
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
     role: text("role").default("member").notNull(),
-    createdAt: timestamp("created_at").notNull(),
+    createdAt: timestamp("created_at", { precision: 6, withTimezone: true }).defaultNow().notNull(),
   },
   (table) => [
     index("member_organizationId_idx").on(table.organizationId),
@@ -198,8 +198,8 @@ export const invitation = pgTable(
     email: text("email").notNull(),
     role: text("role"),
     status: text("status").default("pending").notNull(),
-    expiresAt: timestamp("expires_at").notNull(),
-    createdAt: timestamp("created_at").defaultNow().notNull(),
+    expiresAt: timestamp("expires_at", { precision: 6, withTimezone: true }).notNull(),
+    createdAt: timestamp("created_at", { precision: 6, withTimezone: true }).defaultNow().notNull(),
     inviterId: text("inviter_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -211,10 +211,10 @@ export const invitation = pgTable(
 );
 
 export const rateLimit = pgTable("rate_limit", {
-	id: text("id").primaryKey(),
-	key: varchar("key", { length: 255 }).notNull().unique(),
-	count: integer("count").notNull(),
-	lastRequest: bigint("last_request", { mode: "number" }).notNull(),
+  id: text("id").primaryKey(),
+  key: varchar("key", { length: 255 }).notNull().unique(),
+  count: integer("count").notNull(),
+  lastRequest: bigint("last_request", { mode: "number" }).notNull(),
 });
 
 export const userRelations = relations(user, ({ many }) => ({

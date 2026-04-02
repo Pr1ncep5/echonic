@@ -15,6 +15,18 @@ export function Providers({ children }: { children: ReactNode }) {
       navigate={router.push}
       replace={router.replace}
       magicLink
+      organization={{
+        pathMode: "default",
+        basePath: "/organization",
+        // TODO: Add later logo upload for org 
+        // logo: {
+        //   upload: async (file) => {
+        //     return uploadedUrl;
+        //   },
+        //   size: 256,
+        //   extension: "png",
+        // },
+      }}
       onSessionChange={() => {
         // Clear router cache (protected routes)
         router.refresh();

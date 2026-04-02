@@ -25,7 +25,7 @@ export default async function AuthPage({
   }
 
   return (
-    <main className="container flex min-h-screen grow flex-col items-center justify-center self-center p-4 md:p-6">
+    <main className="container flex min-h-screen grow flex-col items-center justify-center self-center p-4 md:p-6 [&_.bg-card]:border-primary">
       <AuthView
         path={path}
         classNames={{

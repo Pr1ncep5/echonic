@@ -13,9 +13,9 @@ export default async function ProtectedLayout({ children }: { children: React.Re
 
   // 2. Organization Check
   // Since this layout only wraps the (protected) folder, we can safely
-  // redirect them to /account/organizations without causing an infinite loop.
+  // redirect them to /org-selection without causing an infinite loop.
   if (sessionData && !sessionData.session.activeOrganizationId) {
-    redirect("/account/organizations");
+    redirect("/org-selection");
   }
 
   return <>{children}</>;
