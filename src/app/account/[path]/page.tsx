@@ -1,5 +1,8 @@
 import { AccountView } from "@daveyplate/better-auth-ui";
 import { accountViewPaths } from "@daveyplate/better-auth-ui/server";
+import { ArrowLeft } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
 
 export const dynamicParams = false;
 
@@ -16,6 +19,14 @@ export default async function AccountPage({
 
   return (
     <main className="container p-4 md:p-6 [&_.bg-card]:border-primary">
+      <div className="mb-6 flex">
+        <Button variant="ghost" className="gap-2" asChild>
+          <Link href="/">
+            <ArrowLeft className="size-4" />
+            Back to Dashboard
+          </Link>
+        </Button>
+      </div>
       <AccountView
         path={path}
         classNames={{

@@ -20,7 +20,6 @@ const cardClassNames = {
 export function OrgSelectionView() {
   const { hooks, authClient, replace } = useContext(AuthUIContext);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [pendingOrgId, setPendingOrgId] = useState<string | null>(null);
 
   const { data: organizations, isPending } = hooks.useListOrganizations();
   const { data: activeOrganization } = hooks.useActiveOrganization();
@@ -36,16 +35,11 @@ export function OrgSelectionView() {
   }, [organizations]);
 
   const handleSelectOrganization = async (organizationId: string) => {
-    try {
-      setPendingOrgId(organizationId);
-      await authClient.organization.setActive({
-        organizationId,
-        fetchOptions: { throw: true },
-      });
-      replace("/");
-    } finally {
-      setPendingOrgId(null);
-    }
+    await authClient.organization.setActive({
+      organizationId,
+      fetchOptions: { throw: true },
+    });
+    replace("/");
   };
 
   return (
@@ -72,7 +66,6 @@ export function OrgSelectionView() {
                 variant="outline"
                 className="h-14 w-full justify-start border-primary/50"
                 onClick={() => void handleSelectOrganization(organization.id)}
-                disabled={pendingOrgId === organization.id}
                 type="button"
               >
                 <Building2 className="mr-2 size-4" />
