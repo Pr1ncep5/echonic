@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
+
 import { initTRPC } from "@trpc/server";
 /**
  * This context creator accepts `headers` so it can be reused in both
