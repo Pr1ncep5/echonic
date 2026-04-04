@@ -4,9 +4,13 @@ import { z } from "zod";
 import { formOptions } from "@tanstack/react-form";
 
 import { useAppForm } from "@/hooks/use-app-form";
+import { TEXT_MAX_LENGTH } from "../data/constants";
 
 const ttsFormSchema = z.object({
-  text: z.string().min(1, "Please enter some text"),
+  text: z
+    .string()
+    .min(1, "Please enter some text")
+    .max(TEXT_MAX_LENGTH, `Text must be at most ${TEXT_MAX_LENGTH} characters`),
   voiceId: z.string().min(1, "Please select a voice"),
   temperature: z.number(),
   topP: z.number(),

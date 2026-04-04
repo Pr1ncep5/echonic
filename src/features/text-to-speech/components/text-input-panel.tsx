@@ -25,6 +25,7 @@ export function TextInputPanel() {
         <form.Field name="text">
           {(field) => (
             <Textarea
+              aria-label="Text to speech input"
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
               placeholder="Start typing or paste your text here..."
