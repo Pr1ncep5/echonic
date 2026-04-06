@@ -136,6 +136,7 @@ export const generationsRouter = createTRPCRouter({
         generationId = createdGeneration.id;
         r2ObjectKey = `generations/orgs/${ctx.orgId}/${createdGeneration.id}`;
 
+        // TODO: Need to introduce cron-jobs to delete old generations and audio files 
         await uploadAudio({ buffer, key: r2ObjectKey });
 
         await db
