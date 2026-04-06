@@ -1,7 +1,9 @@
 import { createTRPCRouter } from "../init";
+import { generationsRouter } from "./generations";
 import { voicesRouter } from "./voices";
 
 export const appRouter = createTRPCRouter({
+  generations: generationsRouter,
   voices: voicesRouter,
 });
 
