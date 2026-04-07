@@ -1,6 +1,7 @@
 import { auth } from "@/lib/auth";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
+import * as Sentry from "@sentry/node";
 
 /**
  * This context creator accepts `headers` so it can be reused in both
@@ -29,15 +30,22 @@ const t = initTRPC.context<Awaited<ReturnType<typeof createTRPCContext>>>().crea
    */
   transformer: superjson,
 });
+
+const sentryMiddleware = t.middleware(
+  Sentry.trpcMiddleware({
+    attachRpcInput: true,
+  }),
+);
+
 // Base router and procedure helpers
 export const createTRPCRouter = t.router;
 export const createCallerFactory = t.createCallerFactory;
-export const baseProcedure = t.procedure;
+export const baseProcedure = t.procedure.use(sentryMiddleware);
 
 /**
  * Authenticated procedure - blocks if no session exists or user is not logged in.
  */
-export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
+export const protectedProcedure = baseProcedure.use(async ({ ctx, next }) => {
   if (!ctx.userId || !ctx.user || !ctx.session) {
     throw new TRPCError({ code: "UNAUTHORIZED", message: "Not authenticated" });
   }
@@ -55,7 +63,7 @@ export const protectedProcedure = t.procedure.use(async ({ ctx, next }) => {
 /**
  * Organization procedure - strict block if the user has not selected an active organization.
  */
-export const orgProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+export const orgProcedure = baseProcedure.use(async ({ ctx, next }) => {
   if (!ctx.orgId) {
     throw new TRPCError({
       code: "FORBIDDEN",

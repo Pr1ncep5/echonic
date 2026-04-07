@@ -7,6 +7,7 @@ import { chatterbox } from "@/lib/chatterbox-client";
 import { uploadAudio } from "@/lib/r2";
 import { TEXT_MAX_LENGTH } from "@/features/text-to-speech/data/constants";
 import { createTRPCRouter, orgProcedure } from "../init";
+import * as Sentry from "@sentry/nextjs";
 
 // Extract all columns from generation table, but omit orgId and r2ObjectKey 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -95,6 +96,12 @@ export const generationsRouter = createTRPCRouter({
         parseAs: "arrayBuffer",
       });
 
+      Sentry.logger.info("Generation started", {
+        orgId: ctx.orgId,
+        voiceId: input.voiceId,
+        textLength: input.text.length,
+      });
+
       if (error) {
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
@@ -143,10 +150,21 @@ export const generationsRouter = createTRPCRouter({
           .update(generation)
           .set({ r2ObjectKey })
           .where(eq(generation.id, createdGeneration.id));
+
+          Sentry.logger.info("Audio generated", {
+            orgId: ctx.orgId,
+            generationId: generation.id,
+          });
       } catch {
         if (generationId) {
           await db.delete(generation).where(eq(generation.id, generationId)).catch(() => {});
         }
+
+        Sentry.logger.error("Generation failed", {
+          orgId: ctx.orgId,
+          voiceId: input.voiceId,
+          textLength: input.text.length,
+        });
 
         throw new TRPCError({
           code: "INTERNAL_SERVER_ERROR",
