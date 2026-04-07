@@ -83,6 +83,12 @@ export const generationsRouter = createTRPCRouter({
         });
       }
 
+      Sentry.logger.info("Generation started", {
+        orgId: ctx.orgId,
+        voiceId: input.voiceId,
+        textLength: input.text.length,
+      });
+
       const { data, error } = await chatterbox.POST("/generate", {
         body: {
           prompt: input.text,
@@ -94,12 +100,6 @@ export const generationsRouter = createTRPCRouter({
           norm_loudness: true,
         },
         parseAs: "arrayBuffer",
-      });
-
-      Sentry.logger.info("Generation started", {
-        orgId: ctx.orgId,
-        voiceId: input.voiceId,
-        textLength: input.text.length,
       });
 
       if (error) {
@@ -153,7 +153,7 @@ export const generationsRouter = createTRPCRouter({
 
           Sentry.logger.info("Audio generated", {
             orgId: ctx.orgId,
-            generationId: generation.id,
+            generationId: generationId,
           });
       } catch {
         if (generationId) {
