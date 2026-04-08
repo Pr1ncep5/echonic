@@ -9,7 +9,9 @@ import { TEXT_MAX_LENGTH } from "@/features/text-to-speech/data/constants";
 import { createTRPCRouter, orgProcedure } from "../init";
 import * as Sentry from "@sentry/nextjs";
 
-// Extract all columns from generation table, but omit orgId and r2ObjectKey 
+import { polar } from "@/lib/polar";
+
+// Extract all columns from generation table, but omit orgId and r2ObjectKey
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 const { orgId: orgId, r2ObjectKey, ...generationSelect } = getTableColumns(generation);
 
@@ -51,6 +53,27 @@ export const generationsRouter = createTRPCRouter({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      // Check for active subscription before generation
+      try {
+        const customerState = await polar.customers.getStateExternal({
+          externalId: ctx.orgId,
+        });
+        const hasActiveSubscription = (customerState.activeSubscriptions ?? []).length > 0;
+        if (!hasActiveSubscription) {
+          throw new TRPCError({
+            code: "FORBIDDEN",
+            message: "SUBSCRIPTION_REQUIRED",
+          });
+        }
+      } catch (err) {
+        if (err instanceof TRPCError) throw err;
+        // Customer doesn't exist in Polar yet -> no subscription
+        throw new TRPCError({
+          code: "FORBIDDEN",
+          message: "SUBSCRIPTION_REQUIRED",
+        });
+      }
+
       const [voiceRecord] = await db
         .select({
           id: voice.id,
@@ -117,7 +140,7 @@ export const generationsRouter = createTRPCRouter({
       }
 
       const buffer = Buffer.from(data);
-      
+
       let generationId: string | null = null;
       let r2ObjectKey: string | null = null;
 
@@ -143,7 +166,7 @@ export const generationsRouter = createTRPCRouter({
         generationId = createdGeneration.id;
         r2ObjectKey = `generations/orgs/${ctx.orgId}/${createdGeneration.id}`;
 
-        // TODO: Need to introduce cron-jobs to delete old generations and audio files 
+        // TODO: Need to introduce cron-jobs to delete old generations and audio files
         await uploadAudio({ buffer, key: r2ObjectKey });
 
         await db
@@ -151,13 +174,16 @@ export const generationsRouter = createTRPCRouter({
           .set({ r2ObjectKey })
           .where(eq(generation.id, createdGeneration.id));
 
-          Sentry.logger.info("Audio generated", {
-            orgId: ctx.orgId,
-            generationId: generationId,
-          });
+        Sentry.logger.info("Audio generated", {
+          orgId: ctx.orgId,
+          generationId: generationId,
+        });
       } catch {
         if (generationId) {
-          await db.delete(generation).where(eq(generation.id, generationId)).catch(() => {});
+          await db
+            .delete(generation)
+            .where(eq(generation.id, generationId))
+            .catch(() => {});
         }
 
         Sentry.logger.error("Generation failed", {
@@ -178,6 +204,22 @@ export const generationsRouter = createTRPCRouter({
           message: "Failed to store generated audio",
         });
       }
+
+      // Ingest usage event to Polar (fire-and-forget, don't block response)
+      polar.events
+        .ingest({
+          events: [
+            {
+              name: "tts_generation",
+              externalCustomerId: ctx.orgId,
+              metadata: { characters: input.text.length },
+              timestamp: new Date(),
+            },
+          ],
+        })
+        .catch(() => {
+          // Silently fail - don't break the user experience for metering errors
+        });
 
       return {
         id: generationId,

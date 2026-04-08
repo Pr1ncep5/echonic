@@ -7,6 +7,7 @@ import * as schema from "@/db/schema";
 import { env } from "./env";
 
 export const auth = betterAuth({
+  appName: "Echonic",
   database: drizzleAdapter(db, {
     provider: "pg",
     schema: { ...schema }
