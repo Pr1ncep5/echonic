@@ -164,12 +164,14 @@ export function SignUpView({ className, ...props }: React.ComponentPropsWithoutR
                 <FieldSeparator className="mt-4 mb-2">Or continue with</FieldSeparator>
 
                 <div className="flex flex-col gap-3">
-                  <Button variant="outline" asChild className="w-full">
+
+                  {/* TODO: Can add Magic-Link later */}
+                  {/* <Button variant="outline" asChild className="w-full">
                     <Link href="/auth/magic-link">
                       <MailIcon className="mr-2 size-4" />
                       Continue with Magic Link
                     </Link>
-                  </Button>
+                  </Button> */}
 
                   <Button
                     variant="outline"

@@ -41,7 +41,7 @@ const PROMPT_SUGGESTIONS: {
   {
     label: "Speak in different languages",
     prompt:
-      "Hello and welcome! Today we're going on a journey around the world. Bonjour, comment allez-vous? Hola, bienvenidos a todos. Guten Tag, willkommen bei uns. Добрый день, приветствую вас. Ciao a tutti, benvenuti. Let's celebrate the beauty of language together.",
+      "Hello and welcome! Today we're going on a journey around the world. Bonjour, comment allez-vous? Hola, bienvenidos a todos. Guten Tag, willkommen. Ciao a tutti, benvenuti. Let's celebrate the beauty of language together.",
     icon: Languages,
   },
   {

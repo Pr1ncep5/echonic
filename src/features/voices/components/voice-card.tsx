@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { Mic, MoreHorizontal, Pause, Play, Trash2 } from "lucide-react";
+import ReactCountryFlag from "react-country-flag";
 
 import { toast } from "sonner";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -41,7 +42,7 @@ const regionNames = new Intl.DisplayNames(["en"], { type: "region" });
 
 function parseLanguage(locale: string) {
   const [, country] = locale.split("-");
-  if (!country) return { flag: "", region: locale };
+  if (!country) return { flag: "", region: locale, countryCode: "" };
 
   const flag = [...country.toUpperCase()]
     .map((c) => String.fromCodePoint(0x1f1e6 + c.charCodeAt(0) - 65))
@@ -49,12 +50,12 @@ function parseLanguage(locale: string) {
 
   const region = regionNames.of(country) ?? country;
 
-  return { flag, region };
+  return { flag, region, countryCode: country.toUpperCase() };
 }
 
 export function VoiceCard({ voice }: VoiceCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
-  const { flag, region } = parseLanguage(voice.language);
+  const { flag, region, countryCode } = parseLanguage(voice.language);
 
   const audioSrc = `/api/voices/${encodeURIComponent(voice.id)}`;
   const { isPlaying, isLoading, togglePlay } = useAudioPlayback(audioSrc);
@@ -98,8 +99,18 @@ export function VoiceCard({ voice }: VoiceCardProps) {
 
         <p className="line-clamp-1 text-xs text-muted-foreground">{voice.description}</p>
 
-        <p className="flex items-center gap-1 text-xs">
-          <span className="shrink-0">{flag}</span>
+        <p className="flex items-center gap-1.5 text-xs">
+          <span className="shrink-0 flex items-center">
+            {countryCode ? (
+              <ReactCountryFlag 
+                countryCode={countryCode} 
+                svg 
+                style={{ width: '1.5em', height: '1.5em', borderRadius: '2px' }} 
+              />
+            ) : (
+              flag
+            )}
+          </span>
           <span className="truncate font-medium">{region}</span>
         </p>
       </div>
