@@ -9,7 +9,7 @@ type QuickActionCardProps = QuickAction;
 
 export function QuickActionCard({ title, description, gradient, href }: QuickActionCardProps) {
   return (
-    <div className="flex gap-4 rounded-xl border bg-card p-3">
+    <div className="flex gap-4 rounded-xl border border-primary bg-card p-3">
       {/* Visual placeholder with gradient */}
       <div
         className={cn(
