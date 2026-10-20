@@ -32,10 +32,8 @@ export async function POST(request: Request) {
 
   // Check for active subscription before voice creation
   try {
-    const customerState = await polar.customers.getStateExternal({
-      externalId: orgId,
-    });
-    const hasActiveSubscription = (customerState.activeSubscriptions ?? []).length > 0;
+    const customerState = await polar.customers.getStateExternal(orgId);
+    const hasActiveSubscription = (customerState.active_subscriptions ?? []).length > 0;
     if (!hasActiveSubscription) {
       return Response.json({ error: "SUBSCRIPTION_REQUIRED" }, { status: 403 });
     }
@@ -147,9 +145,9 @@ export async function POST(request: Request) {
       events: [
         {
           name: "voice_creation",
-          externalCustomerId: orgId,
+          external_customer_id: orgId,
           metadata: {},
-          timestamp: new Date(),
+          timestamp: new Date().toISOString(),
         },
       ],
     })

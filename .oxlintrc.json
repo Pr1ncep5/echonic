@@ -1,0 +1,31 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "unicorn",
+    "react",
+    "react-perf",
+    "nextjs",
+    "jsx-a11y",
+    "import",
+    "eslint",
+    "promise",
+    "vitest",
+    "oxc"
+  ],
+  "categories": {
+    "correctness": "error",
+    "suspicious": "warn"
+  },
+  "ignorePatterns": ["src/components/ui/**", ".next/**", "out/**", "build/**", "next-env.d.ts"],
+  "rules": {},
+  "overrides": [
+    {
+      "files": ["src/instrumentation-client.ts"],
+      "rules": { "import/namespace": "off" }
+    }
+  ],
+  "env": {
+    "builtin": true
+  }
+}

@@ -1,5 +1,5 @@
 import { TRPCError } from "@trpc/server";
-import { polar } from "@/lib/polar";
+import { isPolarNotFound, polar } from "@/lib/polar";
 import { env } from "@/lib/env";
 import { createTRPCRouter, orgProcedure } from "../init";
 
@@ -7,8 +7,8 @@ export const billingsRouter = createTRPCRouter({
   createCheckout: orgProcedure.mutation(async ({ ctx }) => {
     const result = await polar.checkouts.create({
       products: [env.POLAR_PRODUCT_ID],
-      externalCustomerId: ctx.orgId,
-      successUrl: env.APP_URL,
+      external_customer_id: ctx.orgId,
+      success_url: env.APP_URL,
     });
 
     if (!result.url) {
@@ -23,30 +23,28 @@ export const billingsRouter = createTRPCRouter({
 
   createPortalSession: orgProcedure.mutation(async ({ ctx }) => {
     const result = await polar.customerSessions.create({
-      externalCustomerId: ctx.orgId,
+      external_customer_id: ctx.orgId,
     });
 
-    if (!result.customerPortalUrl) {
+    if (!result.customer_portal_url) {
       throw new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to create customer portal session",
       });
     }
 
-    return { portalUrl: result.customerPortalUrl };
+    return { portalUrl: result.customer_portal_url };
   }),
 
   getStatus: orgProcedure.query(async ({ ctx }) => {
     try {
-      const customerState = await polar.customers.getStateExternal({
-        externalId: ctx.orgId,
-      });
+      const customerState = await polar.customers.getStateExternal(ctx.orgId);
 
-      const hasActiveSubscription = (customerState.activeSubscriptions ?? []).length > 0;
+      const hasActiveSubscription = (customerState.active_subscriptions ?? []).length > 0;
 
       // Sum up estimated costs from all meters across active subscriptions
       let estimatedCostCents = 0;
-      for (const sub of customerState.activeSubscriptions ?? []) {
+      for (const sub of customerState.active_subscriptions ?? []) {
         for (const meter of sub.meters ?? []) {
           estimatedCostCents += meter.amount ?? 0;
         }
@@ -57,8 +55,9 @@ export const billingsRouter = createTRPCRouter({
         customerId: customerState.id,
         estimatedCostCents,
       };
-    } catch {
+    } catch (error) {
       // Customer doesn't exist yet in Polar
+      if (!isPolarNotFound(error)) throw error;
       return {
         hasActiveSubscription: false,
         customerId: null,

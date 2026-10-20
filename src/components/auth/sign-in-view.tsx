@@ -19,7 +19,6 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Spinner } from "@/components/ui/spinner";
-import { MailIcon } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.email("Invalid email"),
@@ -119,7 +118,6 @@ export function SignInView({ className, ...props }: React.ComponentPropsWithoutR
                 <FieldSeparator className="mt-4 mb-2">Or continue with</FieldSeparator>
 
                 <div className="flex flex-col gap-3">
-                  
                   {/* TODO: Can add Magic-Link later */}
                   {/* <Button variant="outline" asChild className="w-full">
                     <Link href="/auth/magic-link">

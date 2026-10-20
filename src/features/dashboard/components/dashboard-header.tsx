@@ -23,13 +23,17 @@ export function DashboardHeader() {
 
       <div className="lg:flex hidden items-center gap-3">
         <Button variant="outline" size="sm" asChild>
-          <Link href="mailto:business@echonic.com"> {/* TODO: [EMAIL_ADDRESS] */}
+          <Link href="mailto:business@echonic.com">
+            {" "}
+            {/* TODO: [EMAIL_ADDRESS] */}
             <ThumbsUp className="mr-2 size-4" />
             <span className="hidden lg:block">Feedback</span>
           </Link>
         </Button>
         <Button variant="outline" size="sm" asChild>
-          <Link href="mailto:business@echonic.com"> {/* TODO: [EMAIL_ADDRESS] */}
+          <Link href="mailto:business@echonic.com">
+            {" "}
+            {/* TODO: [EMAIL_ADDRESS] */}
             <Headphones className="mr-2 size-4" />
             <span className="hidden lg:block">Need help?</span>
           </Link>

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useForm } from "@tanstack/react-form";
@@ -153,6 +153,7 @@ function LanguageCombobox({
   isInvalid?: boolean;
 }) {
   const [open, setOpen] = useState(false);
+  const listId = useId();
 
   const selectedLabel = LANGUAGE_OPTIONS.find((l) => l.value === value)?.label ?? "";
 
@@ -162,7 +163,10 @@ function LanguageCombobox({
         <Button
           type="button"
           variant="outline"
+          // Button-triggered popover is the standard (shadcn) combobox pattern
+          // oxlint-disable-next-line jsx-a11y/prefer-tag-over-role
           role="combobox"
+          aria-controls={listId}
           aria-expanded={open}
           aria-invalid={isInvalid}
           className={cn(
@@ -178,7 +182,7 @@ function LanguageCombobox({
         </Button>
       </PopoverTrigger>
 
-      <PopoverContent className="w-(--radix-popover-trigger-width) p-0">
+      <PopoverContent id={listId} className="w-(--radix-popover-trigger-width) p-0">
         <Command>
           <CommandInput placeholder="Search language..." />
           <CommandList>

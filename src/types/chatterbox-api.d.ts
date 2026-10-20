@@ -7,117 +7,117 @@
  */
 
 export interface paths {
-    "/generate": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        /** Generate Speech */
-        post: operations["generate_speech_generate_post"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
+  "/generate": {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    get?: never;
+    put?: never;
+    /** Generate Speech */
+    post: operations["generate_speech_generate_post"];
+    delete?: never;
+    options?: never;
+    head?: never;
+    patch?: never;
+    trace?: never;
+  };
 }
 export type webhooks = Record<string, never>;
 export interface components {
-    schemas: {
-        /** HTTPValidationError */
-        HTTPValidationError: {
-            /** Detail */
-            detail?: components["schemas"]["ValidationError"][];
-        };
-        /**
-         * TTSRequest
-         * @description Request model for text-to-speech generation.
-         */
-        TTSRequest: {
-            /** Prompt */
-            prompt: string;
-            /** Voice Key */
-            voice_key: string;
-            /**
-             * Temperature
-             * @default 0.8
-             */
-            temperature: number;
-            /**
-             * Top P
-             * @default 0.95
-             */
-            top_p: number;
-            /**
-             * Top K
-             * @default 1000
-             */
-            top_k: number;
-            /**
-             * Repetition Penalty
-             * @default 1.2
-             */
-            repetition_penalty: number;
-            /**
-             * Norm Loudness
-             * @default true
-             */
-            norm_loudness: boolean;
-        };
-        /** ValidationError */
-        ValidationError: {
-            /** Location */
-            loc: (string | number)[];
-            /** Message */
-            msg: string;
-            /** Error Type */
-            type: string;
-        };
+  schemas: {
+    /** HTTPValidationError */
+    HTTPValidationError: {
+      /** Detail */
+      detail?: components["schemas"]["ValidationError"][];
     };
-    responses: never;
-    parameters: never;
-    requestBodies: never;
-    headers: never;
-    pathItems: never;
+    /**
+     * TTSRequest
+     * @description Request model for text-to-speech generation.
+     */
+    TTSRequest: {
+      /** Prompt */
+      prompt: string;
+      /** Voice Key */
+      voice_key: string;
+      /**
+       * Temperature
+       * @default 0.8
+       */
+      temperature: number;
+      /**
+       * Top P
+       * @default 0.95
+       */
+      top_p: number;
+      /**
+       * Top K
+       * @default 1000
+       */
+      top_k: number;
+      /**
+       * Repetition Penalty
+       * @default 1.2
+       */
+      repetition_penalty: number;
+      /**
+       * Norm Loudness
+       * @default true
+       */
+      norm_loudness: boolean;
+    };
+    /** ValidationError */
+    ValidationError: {
+      /** Location */
+      loc: (string | number)[];
+      /** Message */
+      msg: string;
+      /** Error Type */
+      type: string;
+    };
+  };
+  responses: never;
+  parameters: never;
+  requestBodies: never;
+  headers: never;
+  pathItems: never;
 }
 export type $defs = Record<string, never>;
 export interface operations {
-    generate_speech_generate_post: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["TTSRequest"];
-            };
-        };
-        responses: {
-            /** @description Successful Response */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": unknown;
-                    "audio/wav": unknown;
-                };
-            };
-            /** @description Validation Error */
-            422: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["HTTPValidationError"];
-                };
-            };
-        };
+  generate_speech_generate_post: {
+    parameters: {
+      query?: never;
+      header?: never;
+      path?: never;
+      cookie?: never;
     };
+    requestBody: {
+      content: {
+        "application/json": components["schemas"]["TTSRequest"];
+      };
+    };
+    responses: {
+      /** @description Successful Response */
+      200: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": unknown;
+          "audio/wav": unknown;
+        };
+      };
+      /** @description Validation Error */
+      422: {
+        headers: {
+          [name: string]: unknown;
+        };
+        content: {
+          "application/json": components["schemas"]["HTTPValidationError"];
+        };
+      };
+    };
+  };
 }

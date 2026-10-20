@@ -1,6 +1,10 @@
 "use client";
 
-import { CreateOrganizationDialog, UserInvitationsCard, AuthUIContext } from "@daveyplate/better-auth-ui";
+import {
+  CreateOrganizationDialog,
+  UserInvitationsCard,
+  AuthUIContext,
+} from "@daveyplate/better-auth-ui";
 import { Building2, Plus } from "lucide-react";
 import { useContext, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
@@ -9,8 +13,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 const cardClassNames = {
   base: "border border-primary shadow-lg",
   input: "border-primary",
-  primaryButton:
-    "bg-primary text-primary-foreground hover:bg-primary/80 hover:text-foreground",
+  primaryButton: "bg-primary text-primary-foreground hover:bg-primary/80 hover:text-foreground",
   outlineButton:
     "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
   secondaryButton:

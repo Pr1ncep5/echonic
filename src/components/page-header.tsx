@@ -14,13 +14,17 @@ export function PageHeader({ title, className }: { title: string; className?: st
       </div>
       <div className="flex items-center gap-3">
         <Button variant="outline" size="sm" asChild>
-          <Link href="mailto:[mailto:business@echonic.com]"> {/* TODO: [EMAIL_ADDRESS] */}
+          <Link href="mailto:[mailto:business@echonic.com]">
+            {" "}
+            {/* TODO: [EMAIL_ADDRESS] */}
             <ThumbsUp />
             <span className="hidden lg:block">Feedback</span>
           </Link>
         </Button>
         <Button variant="outline" size="sm" asChild>
-          <Link href="mailto:business@echonic.com"> {/* TODO: [EMAIL_ADDRESS] */}
+          <Link href="mailto:business@echonic.com">
+            {" "}
+            {/* TODO: [EMAIL_ADDRESS] */}
             <Headphones />
             <span className="hidden lg:block">Need help?</span>
           </Link>

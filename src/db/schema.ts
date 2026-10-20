@@ -17,49 +17,76 @@ import { createId } from "@paralleldrive/cuid2";
 export const voiceVariantEnum = pgEnum("voice_variant", ["SYSTEM", "CUSTOM"]);
 
 export const voiceCategoryEnum = pgEnum("voice_category", [
-  "AUDIOBOOK", "CONVERSATIONAL", "CUSTOMER_SERVICE", "GENERAL",
-  "NARRATIVE", "CHARACTERS", "MEDITATION", "MOTIVATIONAL",
-  "PODCAST", "ADVERTISING", "VOICEOVER", "CORPORATE"
+  "AUDIOBOOK",
+  "CONVERSATIONAL",
+  "CUSTOMER_SERVICE",
+  "GENERAL",
+  "NARRATIVE",
+  "CHARACTERS",
+  "MEDITATION",
+  "MOTIVATIONAL",
+  "PODCAST",
+  "ADVERTISING",
+  "VOICEOVER",
+  "CORPORATE",
 ]);
 
-export const voice = pgTable("voice", {
-  id: text("id").primaryKey().$defaultFn(() => createId()),
-  orgId: text("org_id").references(() => organization.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  description: text("description"),
-  category: voiceCategoryEnum("category").default("GENERAL").notNull(),
-  language: text("language").default("en-US").notNull(),
-  variant: voiceVariantEnum("variant").notNull(),
-  r2ObjectKey: text("r2_object_key"),
+export const voice = pgTable(
+  "voice",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    orgId: text("org_id").references(() => organization.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    category: voiceCategoryEnum("category").default("GENERAL").notNull(),
+    language: text("language").default("en-US").notNull(),
+    variant: voiceVariantEnum("variant").notNull(),
+    r2ObjectKey: text("r2_object_key"),
 
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
-}, (table) => [
-  index("voice_variant_idx").on(table.variant),
-  index("voice_org_id_idx").on(table.orgId),
-]
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("voice_variant_idx").on(table.variant),
+    index("voice_org_id_idx").on(table.orgId),
+  ],
 );
 
-export const generation = pgTable("generation", {
-  id: text("id").primaryKey().$defaultFn(() => createId()),
-  orgId: text("org_id").notNull().references(() => organization.id, { onDelete: "cascade" }),
-  voiceId: text("voice_id").references(() => voice.id, { onDelete: "set null" }),
+export const generation = pgTable(
+  "generation",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    orgId: text("org_id")
+      .notNull()
+      .references(() => organization.id, { onDelete: "cascade" }),
+    voiceId: text("voice_id").references(() => voice.id, { onDelete: "set null" }),
 
-  text: text("text").notNull(),
-  voiceName: text("voice_name").notNull(),
-  r2ObjectKey: text("r2_object_key"),
+    text: text("text").notNull(),
+    voiceName: text("voice_name").notNull(),
+    r2ObjectKey: text("r2_object_key"),
 
-  temperature: doublePrecision("temperature").notNull(),
-  topP: doublePrecision("top_p").notNull(),
-  topK: integer("top_k").notNull(),
-  repetitionPenalty: doublePrecision("repetition_penalty").notNull(),
+    temperature: doublePrecision("temperature").notNull(),
+    topP: doublePrecision("top_p").notNull(),
+    topK: integer("top_k").notNull(),
+    repetitionPenalty: doublePrecision("repetition_penalty").notNull(),
 
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
-}, (table) => [
-  index("generation_org_id_idx").on(table.orgId),
-  index("generation_voice_id_idx").on(table.voiceId),
-]
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+    updatedAt: timestamp("updated_at")
+      .defaultNow()
+      .$onUpdate(() => new Date())
+      .notNull(),
+  },
+  (table) => [
+    index("generation_org_id_idx").on(table.orgId),
+    index("generation_voice_id_idx").on(table.voiceId),
+  ],
 );
 
 export const voiceRelations = relations(voice, ({ one, many }) => ({
