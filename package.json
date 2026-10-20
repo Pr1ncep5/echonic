@@ -16,7 +16,7 @@
     "sync-api": "bun run scripts/sync-api.ts",
     "clean": "rm -rf .next node_modules && bun install",
     "bump-nextjs": "bunx @next/codemod@canary upgrade latest",
-    "doctor": "npx react-doctor@latest"
+    "doctor": "bunx react-doctor@latest"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1149.0",

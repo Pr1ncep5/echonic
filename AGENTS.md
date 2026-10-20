@@ -24,8 +24,8 @@ Lint is oxlint, format is oxfmt. Do not hand-format or argue with them.
 
 ## Domain rules
 
-- The unit of tenancy and billing is the **Organization**. Voices and Generations belong to an Organization, never to a User. Never say "workspace".
-- tRPC: any procedure touching Voices, Generations or billing uses `orgProcedure` and filters by `ctx.orgId`.
+- The unit of tenancy and billing is the **Organization**. Custom voices and Generations belong to an Organization, never to a User. System voices belong to no Organization and are shared by all of them, so never restrict them by Organization. Never say "workspace".
+- tRPC: any procedure touching Custom voices, Generations or billing uses `orgProcedure` and filters by `ctx.orgId`. Queries that list Voices must still include System voices.
 - Route Handlers (`src/app/api`): take `orgId` only from the session's `activeOrganizationId`.
 - Never accept an `orgId` from client input.
 - Paid operations check for an active Polar subscription first, then ingest a usage event after the work succeeds.
