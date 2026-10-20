@@ -13,7 +13,11 @@ import { createTRPCRouter, orgProcedure } from "../init";
 
 // Extract all columns from generation table, but omit orgId and r2ObjectKey
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
-const { orgId: _orgId, r2ObjectKey: _r2ObjectKey, ...generationSelect } = getTableColumns(generation);
+const {
+  orgId: _orgId,
+  r2ObjectKey: _r2ObjectKey,
+  ...generationSelect
+} = getTableColumns(generation);
 
 export const generationsRouter = createTRPCRouter({
   getById: orgProcedure.input(z.object({ id: z.string() })).query(async ({ input, ctx }) => {

@@ -19,7 +19,6 @@ import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Spinner } from "@/components/ui/spinner";
-import { MailIcon } from "lucide-react";
 
 const loginSchema = z.object({
   email: z.email("Invalid email"),

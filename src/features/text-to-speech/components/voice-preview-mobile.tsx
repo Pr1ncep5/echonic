@@ -88,7 +88,9 @@ export function VoicePreviewMobile({
 
   return (
     <div className="border-t lg:hidden p-4">
-      <audio ref={audioRef} src={audioUrl} />
+      <audio ref={audioRef} src={audioUrl}>
+        <track kind="captions" />
+      </audio>
       <div className="grid grid-cols-[1fr_auto] items-center gap-4">
         <div className="min-w-0">
           <p className="truncate text-sm font-medium">{text}</p>

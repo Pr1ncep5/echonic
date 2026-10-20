@@ -14,10 +14,17 @@
     "oxc"
   ],
   "categories": {
-    "correctness": "error", "suspicious": "warn", 
+    "correctness": "error",
+    "suspicious": "warn"
   },
-  "ignorePatterns": [".next/**", "out/**", "build/**", "next-env.d.ts"],
+  "ignorePatterns": ["src/components/ui/**", ".next/**", "out/**", "build/**", "next-env.d.ts"],
   "rules": {},
+  "overrides": [
+    {
+      "files": ["src/instrumentation-client.ts"],
+      "rules": { "import/namespace": "off" }
+    }
+  ],
   "env": {
     "builtin": true
   }

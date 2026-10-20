@@ -69,17 +69,14 @@ export function generateSpeech(
       }
 
       if (!(data instanceof ArrayBuffer)) {
-        throw new Error(
-          "Chatterbox returned an invalid or empty audio response",
-        );
+        throw new Error("Chatterbox returned an invalid or empty audio response");
       }
 
       return Buffer.from(data);
     },
     catch: (cause) =>
       new TtsInferenceError({
-        reason:
-          cause instanceof Error ? cause.message : "Failed to generate speech",
+        reason: cause instanceof Error ? cause.message : "Failed to generate speech",
         status: cause instanceof HttpStatusError ? cause.status : undefined,
         cause,
       }),
@@ -100,9 +97,7 @@ export function generateSpeech(
     Effect.retry({
       schedule: retrySchedule,
       while: (error) =>
-        error._tag === "TtsTimeout" ||
-        error.status === undefined ||
-        error.status >= 500,
+        error._tag === "TtsTimeout" || error.status === undefined || error.status >= 500,
     }),
   );
 }

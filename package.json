@@ -8,8 +8,10 @@
     "start": "next start",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
+    "types": "tsc --noEmit",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
+    "check": "bun run lint && bun run types && bun run fmt:check",
     "db:seed": "bun run scripts/seed-system-voices.ts",
     "sync-api": "bun run scripts/sync-api.ts",
     "clean": "rm -rf .next node_modules && bun install",
@@ -99,6 +101,7 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3"
   },
+  "packageManager": "bun@1.4.3",
   "ignoreScripts": [
     "sharp",
     "unrs-resolver"

@@ -50,7 +50,7 @@ export const auth = betterAuth({
   },
   plugins: [
     magicLink({
-      sendMagicLink: async ({ email, token, url, metadata }, ctx) => {},
+      sendMagicLink: async () => {},
     }),
     dash(),
     organization(),
