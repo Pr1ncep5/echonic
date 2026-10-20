@@ -92,7 +92,7 @@ function resolveVoice(
     if (!voiceRecord.r2ObjectKey) {
       return yield* Effect.fail(new VoiceAudioUnavailableError({ voiceId }));
     }
-    return voiceRecord as { id: string; name: string; r2ObjectKey: string };
+    return { id: voiceRecord.id, name: voiceRecord.name, r2ObjectKey: voiceRecord.r2ObjectKey };
   });
 }
 

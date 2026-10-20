@@ -40,7 +40,7 @@ Lint is oxlint, format is oxfmt. Do not hand-format or argue with them.
 ## Code rules
 
 - Server-side logic that can fail uses Effect, with tagged errors from the feature's `domain/errors.ts`. Follow `features/text-to-speech/workflows/generate-workflow.ts`. Do not convert unrelated code.
-- No `any`. Avoid `as` assertions: let inference, the Effect error channel, Zod parsing and type guards narrow types. If an assertion is unavoidable (`as const`, the `globalThis` DB singleton), add a one-line comment saying why.
+- No `any`. Avoid `as` assertions: let inference, the Effect error channel, Zod parsing and type guards narrow types. If an assertion is unavoidable (`as const` aside), add a one-line comment saying why.
 - Import across directories with `@/`; relative imports only for siblings.
 - Server config comes from `@/lib/env`, never `process.env`. Do not add new exceptions.
 - No `console.log`. Use `Sentry.logger`.

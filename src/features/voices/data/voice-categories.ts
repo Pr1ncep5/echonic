@@ -18,4 +18,4 @@ export const VOICE_CATEGORY_LABELS: Record<VoiceCategory, string> = {
   CORPORATE: "Corporate",
 };
 
-export const VOICE_CATEGORIES = Object.keys(VOICE_CATEGORY_LABELS) as VoiceCategory[];
+export const VOICE_CATEGORIES = voiceCategoryEnum.enumValues;

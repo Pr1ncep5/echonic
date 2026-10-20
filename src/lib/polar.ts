@@ -12,6 +12,8 @@ export const polar = createPolar({
  */
 export function isPolarNotFound(error: unknown): boolean {
   if (typeof error !== "object" || error === null) return false;
-  const { statusCode, status } = error as { statusCode?: unknown; status?: unknown };
-  return statusCode === 404 || status === 404;
+  return (
+    ("statusCode" in error && error.statusCode === 404) ||
+    ("status" in error && error.status === 404)
+  );
 }

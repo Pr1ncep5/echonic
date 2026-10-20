@@ -6,11 +6,11 @@ import { voice } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { uploadAudio } from "@/lib/r2";
 import { polar } from "@/lib/polar";
-import { VOICE_CATEGORIES, type VoiceCategory } from "@/features/voices/data/voice-categories";
+import { VOICE_CATEGORIES } from "@/features/voices/data/voice-categories";
 
 const createVoiceSchema = z.object({
   name: z.string().min(1, "Voice name is required"),
-  category: z.enum(VOICE_CATEGORIES as [VoiceCategory, ...VoiceCategory[]]),
+  category: z.enum(VOICE_CATEGORIES),
   language: z.string().min(1, "Language is required"),
   description: z.string().nullish(),
 });
