@@ -163,7 +163,7 @@ export function VoicePreviewPanel({
 
           {/* Download */}
           <div className="flex justify-end">
-            <Button  size="sm" onClick={handleDownload} disabled={isDownloading}>
+            <Button size="sm" onClick={handleDownload} disabled={isDownloading}>
               <Download className="size-4" />
               Download
             </Button>

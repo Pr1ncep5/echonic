@@ -108,9 +108,10 @@ Echonic leverages a cutting-edge, type-safe ecosystem to guarantee smooth DX.
 #### 1. The Security & Billing Layer
 
 Every API operation is strictly typed end-to-end via **tRPC**. When a user attempts to generate text-to-speech or clone a voice, the `orgProcedure` middleware intercepts the request:
+
 1. It extracts the session context from **Better Auth** to determine the current Workspace (`orgId`).
-2. It verifies that `orgId` against the **Polar** billing server in real-time. 
-3. If the organization lacks an active subscription, the request is rejected as `UNAUTHORIZED`. 
+2. It verifies that `orgId` against the **Polar** billing server in real-time.
+3. If the organization lacks an active subscription, the request is rejected as `UNAUTHORIZED`.
 4. If validated, the operation proceeds to process the audio, and the usage metrics (character counts or cloning events) are securely ingested to Polar. This ensures zero manipulation of character limits from the frontend.
 
 #### 2. Self-Hosting
@@ -137,9 +138,9 @@ Echonic is designed to be completely self-hosted. You will need:
 
 You can easily deploy the Next.js application to any Node.js host (like Railway, Vercel, or a custom VPS).
 
-- I decided to deploy this project on [Railway](https://railway.app/) because we have no cold starts, no surprise serverless bills, no AWS wrapper adding markup. They run on their own hardware, and we can use their CI/CD pipeline to deploy the application automatically. Every PR can get its own preview deployment, so nothing hits production untested.  
+- I decided to deploy this project on [Railway](https://railway.app/) because we have no cold starts, no surprise serverless bills, no AWS wrapper adding markup. They run on their own hardware, and we can use their CI/CD pipeline to deploy the application automatically. Every PR can get its own preview deployment, so nothing hits production untested.
 - I use [BetterAuth Infrastructure](https://better-auth.com/products/infrastructure) as well as [Sentry](https://sentry.io/) for error monitoring. These services allow me to monitor the application's performance, logs and generally provide a much better developer experience while working.
-- [CodeRabbit](https://coderabbit.ai/) for code reviews. It can generate PRs, suggest improvements, and generally help with the development process, catching bugs and security vulnerabilities before they hit production.  
+- [CodeRabbit](https://coderabbit.ai/) for code reviews. It can generate PRs, suggest improvements, and generally help with the development process, catching bugs and security vulnerabilities before they hit production.
 
 ## Getting Started
 

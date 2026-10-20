@@ -32,7 +32,9 @@ export function TextToSpeechDetailView({ generationId }: { generationId: string 
 
   // Requested voice may no longer exist (deleted); fall back to first available
   const resolvedVoiceId =
-    data?.voiceId && allVoices.some((voice) => voice.id === data.voiceId) ? data.voiceId : fallbackVoiceId;
+    data?.voiceId && allVoices.some((voice) => voice.id === data.voiceId)
+      ? data.voiceId
+      : fallbackVoiceId;
 
   const defaultValues: TTSFormValues = {
     text: data.text,

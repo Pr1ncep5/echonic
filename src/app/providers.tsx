@@ -18,7 +18,7 @@ export function Providers({ children }: { children: ReactNode }) {
       organization={{
         pathMode: "default",
         basePath: "/organization",
-        // TODO: Add later logo upload for org 
+        // TODO: Add later logo upload for org
         // logo: {
         //   upload: async (file) => {
         //     return uploadedUrl;

@@ -102,10 +102,10 @@ export function VoiceCard({ voice }: VoiceCardProps) {
         <p className="flex items-center gap-1.5 text-xs">
           <span className="shrink-0 flex items-center">
             {countryCode ? (
-              <ReactCountryFlag 
-                countryCode={countryCode} 
-                svg 
-                style={{ width: '1.5em', height: '1.5em', borderRadius: '2px' }} 
+              <ReactCountryFlag
+                countryCode={countryCode}
+                svg
+                style={{ width: "1.5em", height: "1.5em", borderRadius: "2px" }}
               />
             ) : (
               flag

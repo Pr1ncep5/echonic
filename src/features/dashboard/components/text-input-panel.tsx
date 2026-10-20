@@ -48,14 +48,17 @@ export function TextInputPanel() {
                   "Start typing to estimate"
                 ) : (
                   <>
-                    <span className="tabular-nums">${(text.length * COST_PER_UNIT).toFixed(4)}</span>{" "}
+                    <span className="tabular-nums">
+                      ${(text.length * COST_PER_UNIT).toFixed(4)}
+                    </span>{" "}
                     estimated
                   </>
                 )}
               </span>
             </Badge>
             <span className="text-xs text-muted-foreground">
-              {text.length.toLocaleString("en-US")} / {TEXT_MAX_LENGTH.toLocaleString("en-US")} characters
+              {text.length.toLocaleString("en-US")} / {TEXT_MAX_LENGTH.toLocaleString("en-US")}{" "}
+              characters
             </span>
           </div>
         </div>

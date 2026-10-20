@@ -10,11 +10,7 @@ export function generateStaticParams() {
   return Object.values(organizationViewPaths).map((path) => ({ path }));
 }
 
-export default async function OrganizationPage({
-  params,
-}: {
-  params: Promise<{ path: string }>;
-}) {
+export default async function OrganizationPage({ params }: { params: Promise<{ path: string }> }) {
   const { path } = await params;
 
   return (

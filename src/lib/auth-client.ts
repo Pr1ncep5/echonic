@@ -15,7 +15,7 @@ export const authClient = createAuthClient({
         console.log(`Rate limit exceeded. Retry after ${retryAfter} seconds`);
       }
     },
-  }
+  },
 });
 
 export const signInWithGitHub = async () => {
