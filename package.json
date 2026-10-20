@@ -16,7 +16,7 @@
     "sync-api": "bun run scripts/sync-api.ts",
     "clean": "rm -rf .next node_modules && bun install",
     "bump-nextjs": "bunx @next/codemod@canary upgrade latest",
-    "doctor": "npx react-doctor@latest"
+    "doctor": "bunx react-doctor@latest"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1149.0",
@@ -86,8 +86,6 @@
     "@types/react": "19.2.14",
     "@types/react-dom": "19.2.3",
     "drizzle-kit": "^0.31.11",
-    "eslint": "^10.12.0",
-    "eslint-config-next": "16.4.0",
     "openapi-typescript": "^7.13.0",
     "oxfmt": "^0.74.0",
     "oxlint": "^1.89.0",

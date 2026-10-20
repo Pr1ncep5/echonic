@@ -50,14 +50,14 @@
 
 While there are many closed-source AI voice tools available today, some organizations require complete control over their audio infrastructure, predictable usage-based B2B billing, and the ability to integrate custom voice cloning directly into their workflows. Echonic bridges this gap by combining quite powerful, open-source AI (the [Chatterbox model](https://github.com/resemble-ai/chatterbox)) with modern web architecture.
 
-It provides a platform where users can instantly generate lifelike audio, clone custom voices directly within their browser, and centralize all their billing and media in one unified workspace.
+It provides a platform where users can instantly generate lifelike audio, clone custom voices directly within their browser, and centralize all their billing and media in one unified organization.
 
 ### Showcase
 
 <div align="center">
   <video src="https://github.com/user-attachments/assets/cc5985cb-3740-4caa-9e64-74b54ef43e59" width="720" autoplay loop muted playsinline></video>
-  <h4>1. Text-to-Speech Workspace</h4>
-  <p><i>The central workspace featuring text synthesis.</i></p>
+  <h4>1. Text-to-Speech Page</h4>
+  <p><i>The central page featuring text synthesis.</i></p>
 
   <br />
 
@@ -78,8 +78,8 @@ It provides a platform where users can instantly generate lifelike audio, clone 
 
 - **Text-to-speech (TTS) generation**: Leverages the open-source _Chatterbox model_ to convert written text into natural audio. You control the output with adjustable creativity and expression parameters, seamlessly outputting standard formats for immediate playback or download.
 - **Voice cloning**: Upload an existing audio file or record yourself directly from your browser using the native audio capturing interface (10s minimum). Echonic instantly maps the frequency and tonality of the sample to create a reusable voice model.
-- **Organization-level workspaces**: Built on a fully multi-tenant architecture to support collaborative workflows using Better Auth. Users can create teams and securely share custom-cloned voices and generation history logs across the entire organization.
-- **Pay-as-you-go billing**: Secure, usage-based B2B billing strictly tied to your workspace using [Polar](https://polar.sh). Start generating using checkouts and dedicated customer portals. Echonic features real-time backend metering, tracking the exact character count of every generation to ensure fair pricing.
+- **Organizations**: Built on a fully multi-tenant architecture to support collaborative workflows using Better Auth. Users can create teams and securely share custom-cloned voices and generation history logs across the entire organization.
+- **Pay-as-you-go billing**: Secure, usage-based B2B billing strictly tied to your organization using [Polar](https://polar.sh). Start generating using checkouts and dedicated customer portals. Echonic features real-time backend metering, tracking the exact character count of every generation to ensure fair pricing.
 - **Robust audio infrastructure**: Audio generations and custom voice samples are securely uploaded to and streamed directly from [Cloudflare R2](https://www.cloudflare.com/developer-platform/r2/) object storage. You can also browse and replay past generations dynamically through a rich WaveSurfer.js waveform audio player.
 - **Modern app experience**: A highly responsive, mobile-first UI built on the server-rendered Next.js 16 App Router. Designed with React, Tailwind CSS, and Shadcn UI, it delivers an accessible user experience complete with bottom drawers, compact controls, and adaptive layouts.
 
@@ -107,12 +107,11 @@ Echonic leverages a cutting-edge, type-safe ecosystem to guarantee smooth DX.
 
 #### 1. The Security & Billing Layer
 
-Every API operation is strictly typed end-to-end via **tRPC**. When a user attempts to generate text-to-speech or clone a voice, the `orgProcedure` middleware intercepts the request:
+Every API operation is strictly typed end-to-end via **tRPC**, except voice creation, which is a Route Handler (`/api/voices/create`) because it accepts a file upload. Both entry points enforce the same rules:
 
-1. It extracts the session context from **Better Auth** to determine the current Workspace (`orgId`).
-2. It verifies that `orgId` against the **Polar** billing server in real-time.
-3. If the organization lacks an active subscription, the request is rejected as `UNAUTHORIZED`.
-4. If validated, the operation proceeds to process the audio, and the usage metrics (character counts or cloning events) are securely ingested to Polar. This ensures zero manipulation of character limits from the frontend.
+1. The session from **Better Auth** determines the current Organization (`orgId`). Without an active Organization the request is rejected (`orgProcedure` throws `FORBIDDEN`; the Route Handler returns `401`). The `orgId` never comes from client input.
+2. Before any paid work, the Organization's subscription is checked against **Polar** in real time. If there is no active subscription, the request is rejected with `SUBSCRIPTION_REQUIRED` (`403`). For text-to-speech this check lives in the generate workflow; for voice creation it lives in the Route Handler.
+3. If validated, the operation processes the audio, and the usage event (character count or voice creation) is ingested to Polar from the server. This ensures zero manipulation of character limits from the frontend.
 
 #### 2. Self-Hosting
 
@@ -232,7 +231,7 @@ Instead of locking organizations into rigid monthly tiers that they might never 
 
 ### Centralized Organization Billing
 
-Because Echonic is built on Better Auth's multi-tenant architecture, Polar Customers are directly mapped to the **workspace** instead of individual users. This means an entire creative department can collaboratively generate audio and clone voices, seamlessly pooling their usage onto a single automated company invoice.
+Because Echonic is built on Better Auth's multi-tenant architecture, Polar Customers are directly mapped to the **Organization** instead of individual users. This means an entire creative department can collaboratively generate audio and clone voices, seamlessly pooling their usage onto a single automated company invoice.
 
 At any time, members can navigate to their organization settings and launch the Polar Customer Portal to view real-time usage meters, manage payment methods, and download receipts—all without needing to build a custom billing UI.
 

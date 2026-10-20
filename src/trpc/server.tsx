@@ -1,13 +1,18 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-
 import "server-only"; // <-- ensure this file cannot be imported from the client
-import { createTRPCOptionsProxy, TRPCQueryOptions } from "@trpc/tanstack-react-query";
+import { createTRPCOptionsProxy } from "@trpc/tanstack-react-query";
 import { headers } from "next/headers";
 import { cache } from "react";
 import { createTRPCContext } from "./init";
 import { makeQueryClient } from "./query-client";
 import { appRouter } from "./routers/_app";
-import { dehydrate, HydrationBoundary } from "@tanstack/react-query";
+import {
+  dehydrate,
+  HydrationBoundary,
+  type InfiniteQueryExecuteOptions,
+  noop,
+  type QueryExecuteOptions,
+  type QueryKey,
+} from "@tanstack/react-query";
 // IMPORTANT: Create a stable getter for the query client that
 //            will return the same client during the same request.
 export const getQueryClient = cache(makeQueryClient);
@@ -30,11 +35,20 @@ export function HydrateClient(props: { children: React.ReactNode }) {
   return <HydrationBoundary state={dehydrate(queryClient)}>{props.children}</HydrationBoundary>;
 }
 
-export function prefetch<T extends ReturnType<TRPCQueryOptions<any>>>(queryOptions: T) {
-  const queryClient = getQueryClient();
-  if (queryOptions.queryKey[1]?.type === "infinite") {
-    void queryClient.prefetchInfiniteQuery(queryOptions as any);
-  } else {
-    void queryClient.prefetchQuery(queryOptions);
-  }
+// Not awaited on purpose: the pending query is dehydrated (see `shouldDehydrateQuery` in
+// query-client.ts) and streamed to the client, so the page doesn't block on the fetch.
+export function prefetch<TQueryFnData, TError, TData, TQueryData, TQueryKey extends QueryKey>(
+  queryOptions: QueryExecuteOptions<TQueryFnData, TError, TData, TQueryData, TQueryKey>,
+) {
+  void getQueryClient().query(queryOptions).catch(noop);
+}
+
+export function prefetchInfinite<
+  TQueryFnData,
+  TError,
+  TData,
+  TQueryKey extends QueryKey,
+  TPageParam,
+>(queryOptions: InfiniteQueryExecuteOptions<TQueryFnData, TError, TData, TQueryKey, TPageParam>) {
+  void getQueryClient().infiniteQuery(queryOptions).catch(noop);
 }

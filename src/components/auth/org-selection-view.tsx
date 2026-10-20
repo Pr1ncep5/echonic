@@ -52,7 +52,7 @@ export function OrgSelectionView() {
       <Card className="border border-primary shadow-lg">
         <CardHeader>
           <CardTitle>Choose an organization</CardTitle>
-          <CardDescription>Select your workspace to continue.</CardDescription>
+          <CardDescription>Select your organization to continue.</CardDescription>
         </CardHeader>
 
         <CardContent className="space-y-3">

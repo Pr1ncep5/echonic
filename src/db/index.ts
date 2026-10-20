@@ -4,12 +4,13 @@ import { env } from "../lib/env";
 import { Pool } from "pg";
 import * as schema from "./schema";
 
-const globalForDb = globalThis as unknown as {
-  db: NodePgDatabase<typeof schema> | undefined;
-};
+declare global {
+  // Reused across Next.js dev hot reloads so each reload doesn't open a new connection pool.
+  var echonicDb: NodePgDatabase<typeof schema> | undefined;
+}
 
 export const db =
-  globalForDb.db ??
+  globalThis.echonicDb ??
   drizzle(
     new Pool({
       connectionString: env.DATABASE_URL,
@@ -18,5 +19,5 @@ export const db =
   );
 
 if (process.env.NODE_ENV !== "production") {
-  globalForDb.db = db;
+  globalThis.echonicDb = db;
 }

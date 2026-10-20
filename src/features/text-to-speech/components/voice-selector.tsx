@@ -36,7 +36,7 @@ export function VoiceSelector() {
       ? {
           id: voiceId,
           name: "Unavailable voice",
-          category: null as null,
+          category: null,
         }
       : voices[0];
 

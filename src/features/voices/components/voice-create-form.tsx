@@ -70,6 +70,8 @@ const voiceCreateFormSchema = z.object({
   description: z.string(),
 });
 
+type VoiceCreateFormValues = z.input<typeof voiceCreateFormSchema>;
+
 function FileDropzone({
   file,
   onFileChange,
@@ -262,22 +264,26 @@ export function VoiceCreateForm({ scrollable, footer, onError }: VoiceCreateForm
     },
   });
 
+  const defaultValues: VoiceCreateFormValues = {
+    name: "",
+    file: null,
+    category: "GENERAL",
+    language: "en-US",
+    description: "",
+  };
+
   const form = useForm({
-    defaultValues: {
-      name: "",
-      file: null as File | null,
-      category: "GENERAL" as string,
-      language: "en-US",
-      description: "",
-    },
+    defaultValues,
     validators: {
       onSubmit: voiceCreateFormSchema,
     },
     onSubmit: async ({ value }) => {
+      if (!value.file) return;
+
       try {
         await createMutation.mutateAsync({
           name: value.name,
-          file: value.file!,
+          file: value.file,
           category: value.category,
           language: value.language,
           description: value.description || undefined,
