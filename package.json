@@ -23,7 +23,7 @@
     "@better-auth/infra": "^0.4.17",
     "@daveyplate/better-auth-ui": "^3.4.0",
     "@dicebear/collection": "^9.4.2",
-    "@dicebear/core": "^10.7.0",
+    "@dicebear/core": "^9.4.2",
     "@paralleldrive/cuid2": "^3.3.0",
     "@polar-sh/sdk": "^1.0.2",
     "@sentry/nextjs": "^11.6.0",
