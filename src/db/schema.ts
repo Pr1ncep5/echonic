@@ -27,7 +27,7 @@ export const voiceCategoryEnum = pgEnum("voice_category", [
   "MOTIVATIONAL",
   "PODCAST",
   "ADVERTISING",
-  "VOICEOVER"
+  "VOICEOVER",
   "CORPORATE",
 ]);
 
