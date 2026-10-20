@@ -4,7 +4,7 @@ import * as Sentry from "@sentry/nextjs";
 
 import { db } from "@/db";
 import { generation, voice } from "@/db/schema";
-import { polar } from "@/lib/polar";
+import { isPolarNotFound, polar } from "@/lib/polar";
 import { deleteAudio, uploadAudio } from "@/lib/r2";
 import { generateSpeech } from "../services/tts-service";
 import {
@@ -36,75 +36,64 @@ export interface GenerateAudioContext {
 function verifySubscription(
   orgId: string,
 ): Effect.Effect<void, SubscriptionRequiredError | BillingServiceError> {
-  return Effect.tryPromise({
-    try: async () => {
-      const customerState = await polar.customers.getStateExternal({
-        externalId: orgId,
-      });
+  return Effect.gen(function* () {
+    const customerState = yield* Effect.tryPromise({
+      try: () => polar.customers.getStateExternal(orgId),
+      catch: (cause) =>
+        // A 404 means the org has no Polar customer yet, i.e. no subscription
+        isPolarNotFound(cause)
+          ? new SubscriptionRequiredError({ orgId })
+          : new BillingServiceError({ orgId, cause }),
+    });
 
-      const hasActiveSubscription = (customerState.activeSubscriptions ?? []).length > 0;
-      if (!hasActiveSubscription) {
-        throw new SubscriptionRequiredError({ orgId });
-      }
-    },
-    catch: (cause) => {
-      if (cause instanceof SubscriptionRequiredError) {
-        return cause;
-      }
-      // If customer doesn't exist in Polar yet, getStateExternal throws 404
-      const isNotFound =
-        typeof cause === "object" &&
-        cause !== null &&
-        ("status" in cause || "statusCode" in cause) &&
-        (cause as { status?: number; statusCode?: number }).status === 404;
-
-      if (isNotFound) {
-        return new SubscriptionRequiredError({ orgId });
-      }
-
-      return new BillingServiceError({ orgId, cause });
-    },
+    const hasActiveSubscription = (customerState.active_subscriptions ?? []).length > 0;
+    if (!hasActiveSubscription) {
+      return yield* Effect.fail(new SubscriptionRequiredError({ orgId }));
+    }
   });
 }
 
 /**
  * Step 2: Fetch voice record and validate that audio sample is available.
  */
-function resolveVoice(voiceId: string, orgId: string) {
-  return Effect.tryPromise({
-    try: async () => {
-      const [voiceRecord] = await db
-        .select({
-          id: voice.id,
-          name: voice.name,
-          r2ObjectKey: voice.r2ObjectKey,
-        })
-        .from(voice)
-        .where(
-          and(
-            eq(voice.id, voiceId),
-            or(
-              eq(voice.variant, "SYSTEM"),
-              and(eq(voice.variant, "CUSTOM"), eq(voice.orgId, orgId)),
+function resolveVoice(
+  voiceId: string,
+  orgId: string,
+): Effect.Effect<
+  { id: string; name: string; r2ObjectKey: string },
+  DatabaseError | VoiceNotFoundError | VoiceAudioUnavailableError
+> {
+  return Effect.gen(function* () {
+    const [voiceRecord] = yield* Effect.tryPromise({
+      try: () =>
+        db
+          .select({
+            id: voice.id,
+            name: voice.name,
+            r2ObjectKey: voice.r2ObjectKey,
+          })
+          .from(voice)
+          .where(
+            and(
+              eq(voice.id, voiceId),
+              or(
+                eq(voice.variant, "SYSTEM"),
+                and(eq(voice.variant, "CUSTOM"), eq(voice.orgId, orgId)),
+              ),
             ),
-          ),
-        )
-        .limit(1);
+          )
+          .limit(1),
+      catch: (cause) => new DatabaseError({ operation: "select", entity: "voice", cause }),
+    });
 
-      return voiceRecord;
-    },
-    catch: (cause) => new DatabaseError({ operation: "select", entity: "voice", cause }),
-  }).pipe(
-    Effect.flatMap((voiceRecord) => {
-      if (!voiceRecord) {
-        return Effect.fail(new VoiceNotFoundError({ voiceId }));
-      }
-      if (!voiceRecord.r2ObjectKey) {
-        return Effect.fail(new VoiceAudioUnavailableError({ voiceId }));
-      }
-      return Effect.succeed(voiceRecord as { id: string; name: string; r2ObjectKey: string });
-    }),
-  );
+    if (!voiceRecord) {
+      return yield* Effect.fail(new VoiceNotFoundError({ voiceId }));
+    }
+    if (!voiceRecord.r2ObjectKey) {
+      return yield* Effect.fail(new VoiceAudioUnavailableError({ voiceId }));
+    }
+    return voiceRecord as { id: string; name: string; r2ObjectKey: string };
+  });
 }
 
 /**
@@ -118,9 +107,9 @@ function recordUsageEvent(orgId: string, textLength: number): Effect.Effect<void
         events: [
           {
             name: "tts_generation",
-            externalCustomerId: orgId,
+            external_customer_id: orgId,
             metadata: { characters: textLength },
-            timestamp: new Date(),
+            timestamp: new Date().toISOString(),
           },
         ],
       });
@@ -237,7 +226,7 @@ export function generateAudioWorkflow(
     });
 
     // 7. Background billing metering (non-blocking)
-    yield* recordUsageEvent(ctx.orgId, input.text.length).pipe(Effect.forkDaemon);
+    yield* Effect.forkDetach(recordUsageEvent(ctx.orgId, input.text.length));
 
     return { id: createdGeneration.id };
   });

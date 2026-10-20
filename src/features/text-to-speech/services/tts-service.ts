@@ -2,6 +2,15 @@ import { Effect, Schedule } from "effect";
 import { chatterbox } from "@/lib/chatterbox-client";
 import { TtsInferenceError, TtsTimeoutError } from "../domain/errors";
 
+class HttpStatusError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
 export interface GenerateSpeechOptions {
   readonly prompt: string;
   readonly voiceKey: string;
@@ -35,8 +44,8 @@ export function generateSpeech(
 
   // Single inference request attempt
   const singleAttempt = Effect.tryPromise({
-    try: async () => {
-      const { data, error } = await chatterbox.POST("/generate", {
+    try: async (signal) => {
+      const { data, error, response } = await chatterbox.POST("/generate", {
         body: {
           prompt: options.prompt,
           voice_key: options.voiceKey,
@@ -47,10 +56,12 @@ export function generateSpeech(
           norm_loudness: options.normLoudness ?? true,
         },
         parseAs: "arrayBuffer",
+        signal,
       });
 
       if (error) {
-        throw new Error(
+        throw new HttpStatusError(
+          response.status,
           typeof error === "object" && error !== null
             ? JSON.stringify(error)
             : "Chatterbox API rejected the generation request",
@@ -58,14 +69,18 @@ export function generateSpeech(
       }
 
       if (!(data instanceof ArrayBuffer)) {
-        throw new Error("Chatterbox returned an invalid or empty audio response");
+        throw new Error(
+          "Chatterbox returned an invalid or empty audio response",
+        );
       }
 
       return Buffer.from(data);
     },
     catch: (cause) =>
       new TtsInferenceError({
-        reason: cause instanceof Error ? cause.message : "Failed to generate speech",
+        reason:
+          cause instanceof Error ? cause.message : "Failed to generate speech",
+        status: cause instanceof HttpStatusError ? cause.status : undefined,
         cause,
       }),
   });
@@ -76,12 +91,18 @@ export function generateSpeech(
   );
 
   return singleAttempt.pipe(
-    // Retry transient network/service failures with backoff
-    Effect.retry(retrySchedule),
-    // Enforce strict upper bound on execution time (e.g. 45s)
+    // Enforce an upper bound on each attempt (e.g. 45s)
     Effect.timeoutOrElse({
       duration: `${timeoutMs} millis`,
       orElse: () => Effect.fail(new TtsTimeoutError({ timeoutMs })),
+    }),
+    // Retry transient failures with backoff; client errors (4xx) are not retried
+    Effect.retry({
+      schedule: retrySchedule,
+      while: (error) =>
+        error._tag === "TtsTimeout" ||
+        error.status === undefined ||
+        error.status >= 500,
     }),
   );
 }

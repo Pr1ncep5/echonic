@@ -35,6 +35,8 @@ export class VoiceAudioUnavailableError extends Data.TaggedError("VoiceAudioUnav
  */
 export class TtsInferenceError extends Data.TaggedError("TtsInference")<{
   readonly reason: string;
+  /** HTTP status returned by the microservice, when the failure was an HTTP response. */
+  readonly status?: number;
   readonly cause?: unknown;
 }> {}
 
@@ -89,6 +91,7 @@ export type GenerationError =
  * TypeScript guarantees at compile time that all tagged errors are handled.
  */
 export function toTRPCError(error: GenerationError): TRPCError {
+  // oxlint-disable-next-line eslint/no-underscore-dangle
   switch (error._tag) {
     case "SubscriptionRequired":
       return new TRPCError({
