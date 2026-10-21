@@ -1,20 +1,15 @@
 import { Effect } from "effect";
 import * as Sentry from "@sentry/nextjs";
-import { auth } from "@/lib/auth";
+import { getOrgSession } from "@/lib/org-membership";
 import { isInfrastructureError, toErrorResponse } from "@/features/voices/domain/errors";
 import { createVoiceWorkflow } from "@/features/voices/workflows/create-voice-workflow";
 
 export async function POST(request: Request) {
-  const sessionData = await auth.api.getSession({
-    headers: request.headers,
-  });
-
-  const userId = sessionData?.user?.id;
-  const orgId = sessionData?.session?.activeOrganizationId;
-
-  if (!userId || !orgId) {
+  const orgSession = await getOrgSession(request.headers);
+  if (!orgSession) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
+  const { orgId } = orgSession;
 
   const url = new URL(request.url);
 

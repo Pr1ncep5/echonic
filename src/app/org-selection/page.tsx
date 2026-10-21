@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { getMemberRole } from "@/lib/org-membership";
 import { OrgSelectionView } from "@/components/auth/org-selection-view";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
@@ -12,7 +13,10 @@ export default async function OrgSelectionPage() {
     redirect("/auth/sign-in");
   }
 
-  if (sessionData.session.activeOrganizationId) {
+  // Must match the protected layout's check, or a stale organization would bounce
+  // the user between the two pages forever.
+  const orgId = sessionData.session.activeOrganizationId;
+  if (orgId && (await getMemberRole(sessionData.user.id, orgId))) {
     redirect("/");
   }
 

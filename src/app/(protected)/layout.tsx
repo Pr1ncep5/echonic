@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { getMemberRole } from "@/lib/org-membership";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -14,7 +15,10 @@ export default async function ProtectedLayout({ children }: { children: React.Re
   // 2. Organization Check
   // Since this layout only wraps the (protected) folder, we can safely
   // redirect them to /org-selection without causing an infinite loop.
-  if (sessionData && !sessionData.session.activeOrganizationId) {
+  // The membership check catches sessions still pointing at an organization
+  // the user was removed from.
+  const orgId = sessionData.session.activeOrganizationId;
+  if (!orgId || !(await getMemberRole(sessionData.user.id, orgId))) {
     redirect("/org-selection");
   }
 
