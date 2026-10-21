@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { and, eq } from "drizzle-orm";
 import { db } from "@/db/index";
 import { magicLink, organization } from "better-auth/plugins";
 import { dash } from "@better-auth/infra";
@@ -53,6 +54,28 @@ export const auth = betterAuth({
       sendMagicLink: async () => {},
     }),
     dash(),
-    organization(),
+    organization({
+      // Better Auth only clears activeOrganizationId on the session of whoever removed the
+      // member or deleted the organization, so clear it on every affected session here.
+      organizationHooks: {
+        afterRemoveMember: async ({ member, organization: org }) => {
+          await db
+            .update(schema.session)
+            .set({ activeOrganizationId: null })
+            .where(
+              and(
+                eq(schema.session.userId, member.userId),
+                eq(schema.session.activeOrganizationId, org.id),
+              ),
+            );
+        },
+        afterDeleteOrganization: async ({ organization: org }) => {
+          await db
+            .update(schema.session)
+            .set({ activeOrganizationId: null })
+            .where(eq(schema.session.activeOrganizationId, org.id));
+        },
+      },
+    }),
   ],
 });

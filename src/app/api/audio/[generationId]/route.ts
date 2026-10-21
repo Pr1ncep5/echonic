@@ -1,7 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { generation } from "@/db/schema";
-import { auth } from "@/lib/auth";
+import { getOrgSession } from "@/lib/org-membership";
 import { getSignedAudioUrl } from "@/lib/r2";
 import { audioResponseHeaders } from "@/lib/audio-content-type";
 
@@ -9,16 +9,11 @@ export async function GET(
   request: Request,
   { params }: { params: Promise<{ generationId: string }> },
 ) {
-  const sessionData = await auth.api.getSession({
-    headers: request.headers,
-  });
-
-  const userId = sessionData?.user?.id;
-  const orgId = sessionData?.session?.activeOrganizationId;
-
-  if (!userId || !orgId) {
+  const orgSession = await getOrgSession(request.headers);
+  if (!orgSession) {
     return new Response("Unauthorized", { status: 401 });
   }
+  const { orgId } = orgSession;
 
   const { generationId } = await params;
 

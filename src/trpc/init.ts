@@ -1,4 +1,5 @@
 import { auth } from "@/lib/auth";
+import { getMemberRole } from "@/lib/org-membership";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
 import * as Sentry from "@sentry/node";
@@ -61,10 +62,13 @@ export const protectedProcedure = baseProcedure.use(async ({ ctx, next }) => {
 });
 
 /**
- * Organization procedure - strict block if the user has not selected an active organization.
+ * Organization procedure - strict block unless the user is still a member of their active
+ * organization. The membership check matters because a removed member's sessions can keep
+ * pointing at the organization (see getOrgSession).
  */
-export const orgProcedure = baseProcedure.use(async ({ ctx, next }) => {
-  if (!ctx.orgId) {
+export const orgProcedure = protectedProcedure.use(async ({ ctx, next }) => {
+  const role = ctx.orgId ? await getMemberRole(ctx.userId, ctx.orgId) : null;
+  if (!ctx.orgId || !role) {
     throw new TRPCError({
       code: "FORBIDDEN",
       message: "Organization context required",
@@ -75,6 +79,7 @@ export const orgProcedure = baseProcedure.use(async ({ ctx, next }) => {
     ctx: {
       ...ctx,
       orgId: ctx.orgId,
+      role,
     },
   });
 });
