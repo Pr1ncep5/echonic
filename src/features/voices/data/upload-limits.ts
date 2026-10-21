@@ -1,0 +1,2 @@
+export const MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
+export const MIN_AUDIO_DURATION_SECONDS = 10;
