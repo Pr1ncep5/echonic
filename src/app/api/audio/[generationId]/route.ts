@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { generation } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getSignedAudioUrl } from "@/lib/r2";
+import { audioResponseHeaders } from "@/lib/audio-content-type";
 
 export async function GET(
   request: Request,
@@ -45,9 +46,9 @@ export async function GET(
   }
 
   return new Response(audioResponse.body, {
-    headers: {
-      "Content-Type": audioResponse.headers.get("content-type") ?? "audio/wav",
-      "Cache-Control": "private, max-age=3600", // 1 hour
-    },
+    headers: audioResponseHeaders(
+      audioResponse.headers.get("content-type"),
+      "private, max-age=3600", // 1 hour
+    ),
   });
 }
