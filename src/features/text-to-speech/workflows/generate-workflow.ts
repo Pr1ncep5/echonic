@@ -1,17 +1,18 @@
-import { Effect, Exit } from "effect";
+import { Effect } from "effect";
 import { and, eq, or } from "drizzle-orm";
+import { createId } from "@paralleldrive/cuid2";
 import * as Sentry from "@sentry/nextjs";
 
 import { db } from "@/db";
 import { generation, voice } from "@/db/schema";
-import { isPolarNotFound, polar } from "@/lib/polar";
-import { deleteAudio, uploadAudio } from "@/lib/r2";
+import { DatabaseError } from "@/db/errors";
+import { uploadAudioWithRollback } from "@/lib/r2";
+import {
+  scheduleUsageEvent,
+  verifySubscription,
+} from "@/features/billing/services/subscription-service";
 import { generateSpeech } from "../services/tts-service";
 import {
-  BillingServiceError,
-  DatabaseError,
-  StorageUploadError,
-  SubscriptionRequiredError,
   VoiceAudioUnavailableError,
   VoiceNotFoundError,
   type GenerationError,
@@ -31,30 +32,7 @@ export interface GenerateAudioContext {
 }
 
 /**
- * Step 1: Verify that the organization has an active Polar subscription.
- */
-function verifySubscription(
-  orgId: string,
-): Effect.Effect<void, SubscriptionRequiredError | BillingServiceError> {
-  return Effect.gen(function* () {
-    const customerState = yield* Effect.tryPromise({
-      try: () => polar.customers.getStateExternal(orgId),
-      catch: (cause) =>
-        // A 404 means the org has no Polar customer yet, i.e. no subscription
-        isPolarNotFound(cause)
-          ? new SubscriptionRequiredError({ orgId })
-          : new BillingServiceError({ orgId, cause }),
-    });
-
-    const hasActiveSubscription = (customerState.active_subscriptions ?? []).length > 0;
-    if (!hasActiveSubscription) {
-      return yield* Effect.fail(new SubscriptionRequiredError({ orgId }));
-    }
-  });
-}
-
-/**
- * Step 2: Fetch voice record and validate that audio sample is available.
+ * Step 1: Fetch voice record and validate that audio sample is available.
  */
 function resolveVoice(
   voiceId: string,
@@ -97,39 +75,12 @@ function resolveVoice(
 }
 
 /**
- * Step 3: Background telemetry / Polar usage metering.
- * Runs in the background and will never block or fail the user response.
- */
-function recordUsageEvent(orgId: string, textLength: number): Effect.Effect<void> {
-  return Effect.tryPromise({
-    try: async () => {
-      await polar.events.ingest({
-        events: [
-          {
-            name: "tts_generation",
-            external_customer_id: orgId,
-            metadata: { characters: textLength },
-            timestamp: new Date().toISOString(),
-          },
-        ],
-      });
-    },
-    catch: (cause) => {
-      Sentry.logger.warn("Failed to ingest Polar TTS usage event", {
-        orgId,
-        textLength,
-        error: cause,
-      });
-    },
-  }).pipe(Effect.ignore);
-}
-
-/**
  * Main Saga: Orchestrates the TTS generation pipeline with guaranteed rollback.
- * Uses Effect.acquireRelease to ensure that:
- * 1. If R2 upload fails, the database draft row is deleted.
- * 2. If the database update fails, BOTH the uploaded R2 audio file AND the database row are cleaned up.
- * 3. No orphaned files remain in storage upon any failure.
+ *
+ * The id and R2 key are known up front, so the audio is uploaded first and the row is
+ * inserted once with its key. A Generation row therefore never exists without audio, and
+ * the only compensation needed is: if the insert fails, Effect.acquireRelease deletes the
+ * uploaded R2 object so no orphaned files remain in storage.
  */
 export function generateAudioWorkflow(
   input: GenerateAudioInput,
@@ -159,76 +110,54 @@ export function generateAudioWorkflow(
       normLoudness: true,
     });
 
-    // 4. Saga: Insert database record with automatic rollback on failure
-    const createdGeneration = yield* Effect.acquireRelease(
-      Effect.tryPromise({
-        try: async () => {
-          const [inserted] = await db
-            .insert(generation)
-            .values({
-              orgId: ctx.orgId,
-              text: input.text,
-              voiceName: voiceRecord.name,
-              voiceId: voiceRecord.id,
-              temperature: input.temperature,
-              topP: input.topP,
-              topK: input.topK,
-              repetitionPenalty: input.repetitionPenalty,
-            })
-            .returning({ id: generation.id });
+    const generationId = createId();
+    const r2Key = `generations/orgs/${ctx.orgId}/${generationId}`;
 
-          if (!inserted) {
-            throw new Error("Database failed to return inserted generation ID");
-          }
-          return inserted;
-        },
-        catch: (cause) => new DatabaseError({ operation: "insert", entity: "generation", cause }),
-      }),
-      (created, exit) =>
-        Exit.isFailure(exit)
-          ? Effect.tryPromise({
-              try: () => db.delete(generation).where(eq(generation.id, created.id)),
-              catch: () => undefined,
-            }).pipe(Effect.ignore)
-          : Effect.void,
-    );
+    // 4. Saga: Upload audio to Cloudflare R2, deleting it again if a later step fails
+    yield* uploadAudioWithRollback({
+      buffer: audioBuffer,
+      key: r2Key,
+      isReferenced: async () => {
+        const [existing] = await db
+          .select({ id: generation.id })
+          .from(generation)
+          .where(eq(generation.id, generationId))
+          .limit(1);
+        return existing !== undefined;
+      },
+    });
 
-    const r2Key = `generations/orgs/${ctx.orgId}/${createdGeneration.id}`;
-
-    // 5. Saga: Upload audio to Cloudflare R2 with automatic cleanup on failure
-    yield* Effect.acquireRelease(
-      Effect.tryPromise({
-        try: () => uploadAudio({ buffer: audioBuffer, key: r2Key }),
-        catch: (cause) => new StorageUploadError({ key: r2Key, cause }),
-      }),
-      (_, exit) =>
-        Exit.isFailure(exit)
-          ? Effect.tryPromise({
-              try: () => deleteAudio(r2Key),
-              catch: () => undefined,
-            }).pipe(Effect.ignore)
-          : Effect.void,
-    );
-
-    // 6. Update database record with the final R2 key
+    // 5. Insert the database record with the R2 key already set
     yield* Effect.tryPromise({
       try: () =>
-        db
-          .update(generation)
-          .set({ r2ObjectKey: r2Key })
-          .where(eq(generation.id, createdGeneration.id)),
-      catch: (cause) => new DatabaseError({ operation: "update", entity: "generation", cause }),
+        db.insert(generation).values({
+          id: generationId,
+          orgId: ctx.orgId,
+          text: input.text,
+          voiceName: voiceRecord.name,
+          voiceId: voiceRecord.id,
+          r2ObjectKey: r2Key,
+          temperature: input.temperature,
+          topP: input.topP,
+          topK: input.topK,
+          repetitionPenalty: input.repetitionPenalty,
+        }),
+      catch: (cause) => new DatabaseError({ operation: "insert", entity: "generation", cause }),
     });
 
     Sentry.logger.info("Audio generated successfully", {
       orgId: ctx.orgId,
-      generationId: createdGeneration.id,
+      generationId,
     });
 
-    // 7. Background billing metering (non-blocking)
-    yield* Effect.forkDetach(recordUsageEvent(ctx.orgId, input.text.length));
+    // 6. Billing metering, after the response is sent
+    yield* scheduleUsageEvent(ctx.orgId, {
+      name: "tts_generation",
+      externalId: generationId,
+      metadata: { characters: input.text.length },
+    });
 
-    return { id: createdGeneration.id };
+    return { id: generationId };
   });
 
   // Effect.scoped ensures all acquireRelease finalizers are bound to this execution
