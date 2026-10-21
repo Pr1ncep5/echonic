@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { TRPCError } from "@trpc/server";
+import * as Sentry from "@sentry/nextjs";
 import { db } from "@/db";
 import { voice } from "@/db/schema";
 import { eq, and, or, ilike, desc, asc } from "drizzle-orm";
@@ -98,7 +99,15 @@ export const voicesRouter = createTRPCRouter({
     if (existingVoice.r2ObjectKey) {
       // TODO: In production, consider background jobs, retries, cron jobs etc.
       // Currently, if this command fails (network drop), the file is orphaned.
-      await deleteAudio(existingVoice.r2ObjectKey).catch(() => {});
+      // The user's delete still succeeds, so the failure is logged to find orphans later.
+      await deleteAudio(existingVoice.r2ObjectKey).catch((error: unknown) => {
+        Sentry.logger.error("Failed to delete voice audio from R2; object is orphaned", {
+          orgId: ctx.orgId,
+          voiceId: existingVoice.id,
+          r2ObjectKey: existingVoice.r2ObjectKey,
+          error,
+        });
+      });
     }
 
     return { success: true };
