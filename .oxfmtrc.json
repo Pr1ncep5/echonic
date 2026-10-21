@@ -7,5 +7,5 @@
   "singleQuote": false,
   "trailingComma": "all",
   "endOfLine": "lf",
-  "ignorePatterns": [".claude/settings.local.json"]
+  "ignorePatterns": [".claude/settings.local.json", ".agents/skills/", ".claude/skills/"]
 }

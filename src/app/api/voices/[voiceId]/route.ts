@@ -3,6 +3,7 @@ import { db } from "@/db";
 import { voice } from "@/db/schema";
 import { auth } from "@/lib/auth";
 import { getSignedAudioUrl } from "@/lib/r2";
+import { audioResponseHeaders } from "@/lib/audio-content-type";
 
 export async function GET(request: Request, { params }: { params: Promise<{ voiceId: string }> }) {
   const sessionData = await auth.api.getSession({
@@ -47,13 +48,10 @@ export async function GET(request: Request, { params }: { params: Promise<{ voic
     return new Response("Failed to fetch voice audio", { status: 502 });
   }
 
-  const contentType = audioResponse.headers.get("content-type") || "audio/wav";
-
   return new Response(audioResponse.body, {
-    headers: {
-      "Content-Type": contentType,
-      "Cache-Control":
-        voiceRecord.variant === "SYSTEM" ? "public, max-age=86400" : "private, max-age=3600",
-    },
+    headers: audioResponseHeaders(
+      audioResponse.headers.get("content-type"),
+      voiceRecord.variant === "SYSTEM" ? "public, max-age=86400" : "private, max-age=3600",
+    ),
   });
 }

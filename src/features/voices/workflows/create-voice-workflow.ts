@@ -8,6 +8,7 @@ import { db } from "@/db";
 import { voice } from "@/db/schema";
 import { DatabaseError } from "@/db/errors";
 import { uploadAudioWithRollback } from "@/lib/r2";
+import { isAudioContentType } from "@/lib/audio-content-type";
 import {
   scheduleUsageEvent,
   verifySubscription,
@@ -21,6 +22,7 @@ import {
   AudioReadError,
   AudioTooLargeError,
   AudioTooShortError,
+  AudioUnsupportedTypeError,
   ContentTypeMissingError,
   InvalidVoiceInputError,
   type CreateVoiceError,
@@ -146,6 +148,11 @@ export function createVoiceWorkflow(
       return yield* Effect.fail(new ContentTypeMissingError());
     }
     const contentType = input.contentTypeHeader.split(";")[0]?.trim() || "audio/wav";
+    // The type is stored on the R2 object and served back from our origin, so a non-audio
+    // type like text/html would turn the upload into a page (stored XSS).
+    if (!isAudioContentType(contentType)) {
+      return yield* Effect.fail(new AudioUnsupportedTypeError({ contentType }));
+    }
 
     const buffer = yield* loadAudio(input.body);
     yield* validateDuration(buffer, contentType);

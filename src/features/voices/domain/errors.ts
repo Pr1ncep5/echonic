@@ -20,6 +20,13 @@ export class InvalidVoiceInputError extends Data.TaggedError("InvalidVoiceInput"
 export class ContentTypeMissingError extends Data.TaggedError("ContentTypeMissing") {}
 
 /**
+ * Thrown when the upload's Content-Type is not an audio type.
+ */
+export class AudioUnsupportedTypeError extends Data.TaggedError("AudioUnsupportedType")<{
+  readonly contentType: string;
+}> {}
+
+/**
  * Thrown when the request body contains no audio.
  */
 export class AudioMissingError extends Data.TaggedError("AudioMissing") {}
@@ -67,6 +74,7 @@ export type CreateVoiceError =
   | BillingServiceError
   | InvalidVoiceInputError
   | ContentTypeMissingError
+  | AudioUnsupportedTypeError
   | AudioMissingError
   | AudioTooLargeError
   | AudioReadError
@@ -90,6 +98,7 @@ export function isInfrastructureError(error: CreateVoiceError): boolean {
     case "SubscriptionRequired":
     case "InvalidVoiceInput":
     case "ContentTypeMissing":
+    case "AudioUnsupportedType":
     case "AudioMissing":
     case "AudioTooLarge":
     case "AudioRead":
@@ -118,6 +127,11 @@ export function toErrorResponse(error: CreateVoiceError): Response {
       return Response.json({ error: "Invalid input", issues: error.issues }, { status: 400 });
     case "ContentTypeMissing":
       return Response.json({ error: "Missing Content-Type header" }, { status: 400 });
+    case "AudioUnsupportedType":
+      return Response.json(
+        { error: `Unsupported file type "${error.contentType}". Please upload an audio file.` },
+        { status: 415 },
+      );
     case "AudioMissing":
       return Response.json({ error: "Please upload an audio file" }, { status: 400 });
     case "AudioTooLarge":
