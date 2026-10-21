@@ -5,7 +5,17 @@ import {
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { Data, Effect, Exit, type Scope } from "effect";
+import * as Sentry from "@sentry/nextjs";
 import { env } from "./env";
+
+/**
+ * Thrown when uploading audio to Cloudflare R2 fails.
+ */
+export class StorageUploadError extends Data.TaggedError("StorageUpload")<{
+  readonly key: string;
+  readonly cause: unknown;
+}> {}
 
 const r2 = new S3Client({
   region: "auto",
@@ -34,6 +44,41 @@ export async function uploadAudio({
       Body: buffer,
       ContentType: contentType,
     }),
+  );
+}
+
+/**
+ * Uploads audio as a saga step: if the enclosing scope fails, the object is deleted again.
+ * The delete is skipped when `isReferenced` finds a row pointing at the key, because a
+ * failed insert may still have committed (e.g. a timeout after commit). Failed rollbacks
+ * are logged with the key so orphaned objects can be found later.
+ */
+export function uploadAudioWithRollback(
+  options: UploadAudioOptions & { readonly isReferenced: () => Promise<boolean> },
+): Effect.Effect<void, StorageUploadError, Scope.Scope> {
+  const { isReferenced, ...upload } = options;
+  return Effect.acquireRelease(
+    Effect.tryPromise({
+      try: () => uploadAudio(upload),
+      catch: (cause) => new StorageUploadError({ key: upload.key, cause }),
+    }),
+    (_, exit) =>
+      Exit.isFailure(exit)
+        ? Effect.tryPromise(async () => {
+            if (!(await isReferenced())) {
+              await deleteAudio(upload.key);
+            }
+          }).pipe(
+            Effect.catch((error) =>
+              Effect.sync(() =>
+                Sentry.logger.error("Failed to roll back uploaded audio", {
+                  key: upload.key,
+                  error,
+                }),
+              ),
+            ),
+          )
+        : Effect.void,
   );
 }
 

@@ -1,20 +1,11 @@
 import { Data } from "effect";
 import { TRPCError } from "@trpc/server";
-
-/**
- * Thrown when the active organization does not have an active Polar subscription.
- */
-export class SubscriptionRequiredError extends Data.TaggedError("SubscriptionRequired")<{
-  readonly orgId: string;
-}> {}
-
-/**
- * Thrown when communication with Polar fails (network error, API down, etc.).
- */
-export class BillingServiceError extends Data.TaggedError("BillingService")<{
-  readonly orgId: string;
-  readonly cause: unknown;
-}> {}
+import type {
+  BillingServiceError,
+  SubscriptionRequiredError,
+} from "@/features/billing/domain/errors";
+import type { DatabaseError } from "@/db/errors";
+import type { StorageUploadError } from "@/lib/r2";
 
 /**
  * Thrown when the requested voice ID cannot be found or does not belong to the user's org.
@@ -48,31 +39,6 @@ export class TtsTimeoutError extends Data.TaggedError("TtsTimeout")<{
 }> {}
 
 /**
- * Thrown when uploading generated audio to Cloudflare R2 fails.
- */
-export class StorageUploadError extends Data.TaggedError("StorageUpload")<{
-  readonly key: string;
-  readonly cause: unknown;
-}> {}
-
-/**
- * Thrown when deleting an object from Cloudflare R2 fails.
- */
-export class StorageDeleteError extends Data.TaggedError("StorageDelete")<{
-  readonly key: string;
-  readonly cause: unknown;
-}> {}
-
-/**
- * Thrown when a database operation (insert, update, delete) fails.
- */
-export class DatabaseError extends Data.TaggedError("Database")<{
-  readonly operation: "select" | "insert" | "update" | "delete";
-  readonly entity: "generation" | "voice";
-  readonly cause: unknown;
-}> {}
-
-/**
  * Union of all domain errors that can occur during audio generation.
  */
 export type GenerationError =
@@ -83,7 +49,6 @@ export type GenerationError =
   | TtsInferenceError
   | TtsTimeoutError
   | StorageUploadError
-  | StorageDeleteError
   | DatabaseError;
 
 /**
@@ -119,7 +84,6 @@ export function toTRPCError(error: GenerationError): TRPCError {
         message: error.reason,
       });
     case "StorageUpload":
-    case "StorageDelete":
       return new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
         message: "Failed to store generated audio",
