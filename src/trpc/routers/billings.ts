@@ -1,6 +1,12 @@
 import { TRPCError } from "@trpc/server";
-import { isPolarNotFound, polar } from "@/lib/polar";
+import { Effect } from "effect";
+import * as Sentry from "@sentry/nextjs";
+import { polar } from "@/lib/polar";
 import { env } from "@/lib/env";
+import {
+  getCustomerState,
+  hasActiveSubscription,
+} from "@/features/billing/services/subscription-service";
 import { createTRPCRouter, orgProcedure } from "../init";
 
 export const billingsRouter = createTRPCRouter({
@@ -37,32 +43,33 @@ export const billingsRouter = createTRPCRouter({
   }),
 
   getStatus: orgProcedure.query(async ({ ctx }) => {
-    try {
-      const customerState = await polar.customers.getStateExternal(ctx.orgId);
+    const customerState = await Effect.runPromise(
+      getCustomerState(ctx.orgId).pipe(
+        Effect.tapError((error) =>
+          Effect.sync(() => Sentry.captureException(error.cause, { tags: { orgId: ctx.orgId } })),
+        ),
+        Effect.mapError(
+          () =>
+            new TRPCError({
+              code: "INTERNAL_SERVER_ERROR",
+              message: "Failed to communicate with billing service",
+            }),
+        ),
+      ),
+    );
 
-      const hasActiveSubscription = (customerState.active_subscriptions ?? []).length > 0;
-
-      // Sum up estimated costs from all meters across active subscriptions
-      let estimatedCostCents = 0;
-      for (const sub of customerState.active_subscriptions ?? []) {
-        for (const meter of sub.meters ?? []) {
-          estimatedCostCents += meter.amount ?? 0;
-        }
+    // Sum up estimated costs from all meters across active subscriptions
+    let estimatedCostCents = 0;
+    for (const sub of customerState?.active_subscriptions ?? []) {
+      for (const meter of sub.meters ?? []) {
+        estimatedCostCents += meter.amount ?? 0;
       }
-
-      return {
-        hasActiveSubscription,
-        customerId: customerState.id,
-        estimatedCostCents,
-      };
-    } catch (error) {
-      // Customer doesn't exist yet in Polar
-      if (!isPolarNotFound(error)) throw error;
-      return {
-        hasActiveSubscription: false,
-        customerId: null,
-        estimatedCostCents: 0,
-      };
     }
+
+    return {
+      hasActiveSubscription: hasActiveSubscription(customerState),
+      customerId: customerState?.id ?? null,
+      estimatedCostCents,
+    };
   }),
 });
