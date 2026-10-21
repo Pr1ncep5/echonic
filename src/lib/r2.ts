@@ -5,7 +5,17 @@ import {
   DeleteObjectCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
+import { Data, Effect, Exit, type Scope } from "effect";
+import * as Sentry from "@sentry/nextjs";
 import { env } from "./env";
+
+/**
+ * Thrown when uploading audio to Cloudflare R2 fails.
+ */
+export class StorageUploadError extends Data.TaggedError("StorageUpload")<{
+  readonly key: string;
+  readonly cause: unknown;
+}> {}
 
 const r2 = new S3Client({
   region: "auto",
