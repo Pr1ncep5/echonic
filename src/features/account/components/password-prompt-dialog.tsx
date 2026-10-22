@@ -37,15 +37,17 @@ export function PasswordPromptDialog({
   onConfirm,
 }: PasswordPromptDialogProps) {
   const [password, setPassword] = useState("");
+  const [wasOpen, setWasOpen] = useState(open);
+
+  // Clear the password however the dialog closes (Cancel, success, parent state). The dialog
+  // stays mounted, so a leftover password would let anyone skip the re-authentication.
+  if (open !== wasOpen) {
+    setWasOpen(open);
+    if (!open) setPassword("");
+  }
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(next) => {
-        if (!next) setPassword("");
-        onOpenChange(next);
-      }}
-    >
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
         <form
           className="contents"
