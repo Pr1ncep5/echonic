@@ -8,7 +8,7 @@
     "start": "next start",
     "lint": "oxlint",
     "lint:fix": "oxlint --fix",
-    "types": "tsc --noEmit",
+    "types": "next typegen && tsc --noEmit",
     "fmt": "oxfmt",
     "fmt:check": "oxfmt --check",
     "check": "bun run lint && bun run types && bun run fmt:check",
