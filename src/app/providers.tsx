@@ -1,39 +1,27 @@
 "use client";
 
-import { AuthUIProvider } from "@daveyplate/better-auth-ui";
-import Link from "next/link";
+import { organizationPlugin } from "@better-auth-ui/core/plugins/organization";
+import { AuthProvider } from "@better-auth-ui/react";
 import { useRouter } from "next/navigation";
 import type { ReactNode } from "react";
 import { authClient } from "@/lib/auth-client";
 
+// The organization hooks require this plugin. Without a `slug` option they read the
+// active Organization from the session's activeOrganizationId rather than the URL.
+const authPlugins = [organizationPlugin()];
+
+// Rendered inside TRPCReactProvider so auth queries share tRPC's QueryClient,
+// letting an Organization switch invalidate both from one cache.
 export function Providers({ children }: { children: ReactNode }) {
   const router = useRouter();
 
   return (
-    <AuthUIProvider
+    <AuthProvider
       authClient={authClient}
-      navigate={router.push}
-      replace={router.replace}
-      magicLink
-      organization={{
-        pathMode: "default",
-        basePath: "/organization",
-        // TODO: Add later logo upload for org
-        // logo: {
-        //   upload: async (file) => {
-        //     return uploadedUrl;
-        //   },
-        //   size: 256,
-        //   extension: "png",
-        // },
-      }}
-      onSessionChange={() => {
-        // Clear router cache (protected routes)
-        router.refresh();
-      }}
-      Link={Link}
+      plugins={authPlugins}
+      navigate={({ to, replace }) => (replace ? router.replace(to) : router.push(to))}
     >
       {children}
-    </AuthUIProvider>
+    </AuthProvider>
   );
 }

@@ -32,11 +32,11 @@ export default function RootLayout({
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
-        <Providers>
-          <TRPCReactProvider>
+        <TRPCReactProvider>
+          <Providers>
             <NuqsAdapter>{children}</NuqsAdapter>
-          </TRPCReactProvider>
-        </Providers>
+          </Providers>
+        </TRPCReactProvider>
 
         <Toaster />
       </body>
