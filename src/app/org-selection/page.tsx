@@ -1,6 +1,6 @@
 import { auth } from "@/lib/auth";
 import { getMemberRole } from "@/lib/org-membership";
-import { OrgSelectionView } from "@/components/auth/org-selection-view";
+import { OrgSelectionView } from "@/features/organizations/views/org-selection-view";
 import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 
@@ -21,7 +21,7 @@ export default async function OrgSelectionPage() {
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-background p-4 md:p-6">
+    <main className="flex min-h-screen items-center justify-center bg-muted/40 p-4 md:p-6">
       <OrgSelectionView />
     </main>
   );

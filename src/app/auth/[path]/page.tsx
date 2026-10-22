@@ -1,42 +1,39 @@
-import { AuthView } from "@daveyplate/better-auth-ui";
-import { authViewPaths } from "@daveyplate/better-auth-ui/server";
+import { notFound } from "next/navigation";
+import { Suspense } from "react";
+import { ForgotPasswordView } from "@/components/auth/forgot-password-view";
+import { MagicLinkView } from "@/components/auth/magic-link-view";
+import { ResetPasswordView } from "@/components/auth/reset-password-view";
 import { SignInView } from "@/components/auth/sign-in-view";
+import { SignOutView } from "@/components/auth/sign-out-view";
 import { SignUpView } from "@/components/auth/sign-up-view";
+import { TwoFactorView } from "@/components/auth/two-factor-view";
+
+const AUTH_VIEWS = {
+  "sign-in": SignInView,
+  "sign-up": SignUpView,
+  "sign-out": SignOutView,
+  "magic-link": MagicLinkView,
+  "forgot-password": ForgotPasswordView,
+  "reset-password": ResetPasswordView,
+  "two-factor": TwoFactorView,
+} as const;
 
 export const dynamicParams = false;
 
 export function generateStaticParams() {
-  return Object.values(authViewPaths).map((path) => ({ path }));
+  return Object.keys(AUTH_VIEWS).map((path) => ({ path }));
 }
 
-export default async function AuthPage({ params }: { params: Promise<{ path: string }> }) {
+export default async function AuthPage({ params }: PageProps<"/auth/[path]">) {
   const { path } = await params;
 
-  if (path === authViewPaths.SIGN_IN) {
-    return <SignInView />;
-  }
+  const View = Object.entries(AUTH_VIEWS).find(([key]) => key === path)?.[1];
+  if (!View) notFound();
 
-  if (path === authViewPaths.SIGN_UP) {
-    return <SignUpView />;
-  }
-
+  // ResetPasswordView reads the token from the query string, which needs a Suspense boundary.
   return (
-    <main className="container flex min-h-screen grow flex-col items-center justify-center self-center p-4 md:p-6 [&_.bg-card]:border-primary">
-      <AuthView
-        path={path}
-        classNames={{
-          base: "border border-primary shadow-lg",
-          form: {
-            input: "border-primary",
-            primaryButton:
-              "bg-primary text-primary-foreground hover:bg-primary/80 hover:text-foreground",
-            outlineButton:
-              "border-border bg-background hover:bg-muted hover:text-foreground aria-expanded:bg-muted aria-expanded:text-foreground dark:border-input dark:bg-input/30 dark:hover:bg-input/50",
-            secondaryButton:
-              "bg-secondary text-secondary-foreground hover:bg-secondary/80 aria-expanded:bg-secondary aria-expanded:text-secondary-foreground",
-          },
-        }}
-      />
-    </main>
+    <Suspense>
+      <View />
+    </Suspense>
   );
 }
