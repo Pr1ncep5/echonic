@@ -18,6 +18,8 @@ import { authClient, signInWithGitHub, signInWithGoogle } from "@/lib/auth-clien
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { useCallback, useEffect } from "react";
+import { KeyRound, Mail } from "lucide-react";
 import { Spinner } from "@/components/ui/spinner";
 
 const loginSchema = z.object({
@@ -32,21 +34,50 @@ export function SignInView({ className, ...props }: React.ComponentPropsWithoutR
     defaultValues: { email: "", password: "" },
     validators: { onSubmit: loginSchema },
     onSubmit: async ({ value }) => {
-      const { error } = await authClient.signIn.email({
+      const { data, error } = await authClient.signIn.email({
         email: value.email,
         password: value.password,
       });
       if (error) {
         return toast.error(error.message || "Failed to sign in");
       }
+      // twoFactorClient is already navigating to /auth/two-factor.
+      if (data && "twoFactorRedirect" in data && data.twoFactorRedirect) return;
       toast.success("Welcome back!");
       router.push("/");
     },
   });
 
+  const signInWithPasskey = useCallback(
+    async (autoFill: boolean) => {
+      const result = await authClient.signIn.passkey({ autoFill });
+      if (result?.error) {
+        // Autofill is cancelled whenever the user types instead; only report explicit attempts.
+        if (!autoFill) toast.error(result.error.message || "Passkey sign-in was cancelled");
+        return;
+      }
+      router.push("/");
+      router.refresh();
+    },
+    [router],
+  );
+
+  // Lets the browser offer saved passkeys directly in the email field's autofill.
+  useEffect(() => {
+    if (typeof PublicKeyCredential === "undefined") return;
+    void (async () => {
+      if (await PublicKeyCredential.isConditionalMediationAvailable?.()) {
+        await signInWithPasskey(true);
+      }
+    })();
+  }, [signInWithPasskey]);
+
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className={cn("w-full max-w-md border border-primary shadow-lg", className)} {...props}>
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+      <Card
+        className={cn("w-full max-w-md border-0 shadow-none ring-1 ring-border/70", className)}
+        {...props}
+      >
         <CardHeader>
           <CardTitle>Welcome back</CardTitle>
           <CardDescription>Enter your credentials to sign in to your account</CardDescription>
@@ -65,9 +96,9 @@ export function SignInView({ className, ...props }: React.ComponentPropsWithoutR
                   <Field>
                     <FieldLabel htmlFor="email">Email</FieldLabel>
                     <Input
-                      className="border-primary"
                       id="email"
                       type="email"
+                      autoComplete="username webauthn"
                       placeholder="m@example.com"
                       required
                       value={field.state.value}
@@ -86,15 +117,15 @@ export function SignInView({ className, ...props }: React.ComponentPropsWithoutR
                       <FieldLabel htmlFor="password">Password</FieldLabel>
                       <Link
                         href="/auth/forgot-password"
-                        className="text-sm underline underline-offset-4 text-muted-foreground hover:text-primary"
+                        className="text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
                       >
                         Forgot password?
                       </Link>
                     </div>
                     <Input
-                      className="border-primary"
                       id="password"
                       type="password"
+                      autoComplete="current-password"
                       required
                       value={field.state.value}
                       onBlur={field.handleBlur}
@@ -118,13 +149,22 @@ export function SignInView({ className, ...props }: React.ComponentPropsWithoutR
                 <FieldSeparator className="mt-4 mb-2">Or continue with</FieldSeparator>
 
                 <div className="flex flex-col gap-3">
-                  {/* TODO: Can add Magic-Link later */}
-                  {/* <Button variant="outline" asChild className="w-full">
+                  <Button
+                    variant="outline"
+                    type="button"
+                    className="w-full"
+                    onClick={() => void signInWithPasskey(false)}
+                  >
+                    <KeyRound className="mr-2 size-4" />
+                    Sign in with a passkey
+                  </Button>
+
+                  <Button variant="outline" asChild className="w-full">
                     <Link href="/auth/magic-link">
-                      <MailIcon className="mr-2 size-4" />
-                      Sign in with Magic Link
+                      <Mail className="mr-2 size-4" />
+                      Email me a sign-in link
                     </Link>
-                  </Button> */}
+                  </Button>
 
                   <Button
                     variant="outline"

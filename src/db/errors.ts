@@ -5,6 +5,6 @@ import { Data } from "effect";
  */
 export class DatabaseError extends Data.TaggedError("Database")<{
   readonly operation: "select" | "insert" | "update" | "delete";
-  readonly entity: "generation" | "voice";
+  readonly entity: "generation" | "voice" | "member";
   readonly cause: unknown;
 }> {}

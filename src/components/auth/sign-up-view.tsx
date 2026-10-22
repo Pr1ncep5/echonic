@@ -55,8 +55,11 @@ export function SignUpView({ className, ...props }: React.ComponentPropsWithoutR
   });
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background p-4">
-      <Card className={cn("w-full max-w-md border border-primary shadow-lg", className)} {...props}>
+    <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
+      <Card
+        className={cn("w-full max-w-md border-0 shadow-none ring-1 ring-border/70", className)}
+        {...props}
+      >
         <CardHeader>
           <CardTitle>Create an account</CardTitle>
           <CardDescription>Enter your information below to create your account</CardDescription>
@@ -75,7 +78,6 @@ export function SignUpView({ className, ...props }: React.ComponentPropsWithoutR
                   <Field>
                     <FieldLabel htmlFor="name">Full Name</FieldLabel>
                     <Input
-                      className="border-primary"
                       id="name"
                       type="text"
                       placeholder="John Doe"
@@ -94,7 +96,6 @@ export function SignUpView({ className, ...props }: React.ComponentPropsWithoutR
                   <Field>
                     <FieldLabel htmlFor="email">Email</FieldLabel>
                     <Input
-                      className="border-primary"
                       id="email"
                       type="email"
                       placeholder="m@example.com"
@@ -117,7 +118,6 @@ export function SignUpView({ className, ...props }: React.ComponentPropsWithoutR
                   <Field>
                     <FieldLabel htmlFor="password">Password</FieldLabel>
                     <Input
-                      className="border-primary"
                       id="password"
                       type="password"
                       required
@@ -136,7 +136,6 @@ export function SignUpView({ className, ...props }: React.ComponentPropsWithoutR
                   <Field>
                     <FieldLabel htmlFor="confirm-password">Confirm Password</FieldLabel>
                     <Input
-                      className="border-primary"
                       id="confirm-password"
                       type="password"
                       required
