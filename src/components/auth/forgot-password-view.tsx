@@ -1,5 +1,6 @@
 "use client";
 
+import { useRequestPasswordReset } from "@better-auth-ui/react";
 import { MailCheck } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -17,7 +18,11 @@ const emailSchema = z.email();
 export function ForgotPasswordView() {
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
+
+  const { mutate: requestPasswordReset, isPending } = useRequestPasswordReset(authClient, {
+    onSuccess: (_data, variables) => setSentTo(variables.email),
+    onError: (error) => toast.error(error.error?.message ?? "Couldn't send the reset link"),
+  });
 
   const isValid = emailSchema.safeParse(email.trim()).success;
 
@@ -47,17 +52,11 @@ export function ForgotPasswordView() {
         </div>
       ) : (
         <form
-          onSubmit={async (event) => {
+          onSubmit={(event) => {
             event.preventDefault();
-            if (!isValid) return;
-            setIsPending(true);
-            const { error } = await authClient.requestPasswordReset({
-              email: email.trim(),
-              redirectTo: "/auth/reset-password",
-            });
-            setIsPending(false);
-            if (error) return toast.error(error.message ?? "Couldn't send the reset link");
-            setSentTo(email.trim());
+            if (isValid) {
+              requestPasswordReset({ email: email.trim(), redirectTo: "/auth/reset-password" });
+            }
           }}
         >
           <FieldGroup>

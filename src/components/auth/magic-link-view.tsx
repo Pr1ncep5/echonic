@@ -1,5 +1,6 @@
 "use client";
 
+import { useSignInMagicLink } from "@better-auth-ui/react/plugins/magic-link";
 import { MailCheck } from "lucide-react";
 import Link from "next/link";
 import { useState } from "react";
@@ -17,7 +18,11 @@ const emailSchema = z.email();
 export function MagicLinkView() {
   const [email, setEmail] = useState("");
   const [sentTo, setSentTo] = useState<string | null>(null);
-  const [isPending, setIsPending] = useState(false);
+
+  const { mutate: signInMagicLink, isPending } = useSignInMagicLink(authClient, {
+    onSuccess: (_data, variables) => setSentTo(variables.email),
+    onError: (error) => toast.error(error.error?.message ?? "Couldn't send the sign-in link"),
+  });
 
   const isValid = emailSchema.safeParse(email.trim()).success;
 
@@ -59,17 +64,9 @@ export function MagicLinkView() {
       }
     >
       <form
-        onSubmit={async (event) => {
+        onSubmit={(event) => {
           event.preventDefault();
-          if (!isValid) return;
-          setIsPending(true);
-          const { error } = await authClient.signIn.magicLink({
-            email: email.trim(),
-            callbackURL: "/",
-          });
-          setIsPending(false);
-          if (error) return toast.error(error.message ?? "Couldn't send the sign-in link");
-          setSentTo(email.trim());
+          if (isValid) signInMagicLink({ email: email.trim(), callbackURL: "/" });
         }}
       >
         <FieldGroup>

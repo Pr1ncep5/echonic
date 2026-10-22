@@ -1,5 +1,7 @@
 "use client";
 
+import { useVerifyBackupCode, useVerifyTotp } from "@better-auth-ui/react/plugins/two-factor";
+import type { BetterFetchError } from "better-auth/client";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -21,21 +23,31 @@ export function TwoFactorView() {
   const [mode, setMode] = useState<"totp" | "backup">("totp");
   const [code, setCode] = useState("");
   const [trustDevice, setTrustDevice] = useState(false);
-  const [isPending, setIsPending] = useState(false);
 
-  const verify = async (value: string) => {
-    setIsPending(true);
-    const { error } =
-      mode === "totp"
-        ? await authClient.twoFactor.verifyTotp({ code: value, trustDevice })
-        : await authClient.twoFactor.verifyBackupCode({ code: value, trustDevice });
-    setIsPending(false);
-    if (error) {
+  // Both hooks refresh the session once the second factor creates it.
+  const verifyOptions = {
+    onSuccess: () => {
+      router.push("/");
+      router.refresh();
+    },
+    onError: (error: BetterFetchError) => {
       setCode("");
-      return toast.error(error.message ?? "That code didn't work");
-    }
-    router.push("/");
-    router.refresh();
+      toast.error(error.error?.message ?? "That code didn't work");
+    },
+  };
+  const { mutate: verifyTotp, isPending: isVerifyingTotp } = useVerifyTotp(
+    authClient,
+    verifyOptions,
+  );
+  const { mutate: verifyBackupCode, isPending: isVerifyingBackupCode } = useVerifyBackupCode(
+    authClient,
+    verifyOptions,
+  );
+  const isPending = isVerifyingTotp || isVerifyingBackupCode;
+
+  const verify = (value: string) => {
+    if (mode === "totp") verifyTotp({ code: value, trustDevice });
+    else verifyBackupCode({ code: value, trustDevice });
   };
 
   const canSubmit = mode === "totp" ? code.length === CODE_LENGTH : code.trim().length > 0;
@@ -57,7 +69,7 @@ export function TwoFactorView() {
       <form
         onSubmit={(event) => {
           event.preventDefault();
-          if (canSubmit) void verify(code.trim());
+          if (canSubmit) verify(code.trim());
         }}
       >
         <FieldGroup>
@@ -68,7 +80,7 @@ export function TwoFactorView() {
                 pattern={REGEXP_ONLY_DIGITS}
                 value={code}
                 onChange={setCode}
-                onComplete={(value: string) => void verify(value)}
+                onComplete={(value: string) => verify(value)}
                 disabled={isPending}
                 aria-label="Authentication code"
               >

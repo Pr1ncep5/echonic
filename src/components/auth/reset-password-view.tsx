@@ -1,5 +1,6 @@
 "use client";
 
+import { useResetPassword } from "@better-auth-ui/react";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState } from "react";
@@ -19,7 +20,14 @@ export function ResetPasswordView() {
   // Better Auth redirects here with ?token=… or, for an expired or used link, ?error=INVALID_TOKEN.
   const token = searchParams.get("token");
   const [password, setPassword] = useState("");
-  const [isPending, setIsPending] = useState(false);
+
+  const { mutate: resetPassword, isPending } = useResetPassword(authClient, {
+    onSuccess: () => {
+      toast.success("Password set. Sign in with your new password.");
+      router.push("/auth/sign-in");
+    },
+    onError: (error) => toast.error(error.error?.message ?? "Couldn't set your password"),
+  });
 
   if (!token) {
     return (
@@ -42,15 +50,11 @@ export function ResetPasswordView() {
   return (
     <AuthShell title="Set a new password" description="You'll be signed out on all other devices.">
       <form
-        onSubmit={async (event) => {
+        onSubmit={(event) => {
           event.preventDefault();
-          if (password.length < MIN_PASSWORD_LENGTH) return;
-          setIsPending(true);
-          const { error } = await authClient.resetPassword({ newPassword: password, token });
-          setIsPending(false);
-          if (error) return toast.error(error.message ?? "Couldn't set your password");
-          toast.success("Password set. Sign in with your new password.");
-          router.push("/auth/sign-in");
+          if (password.length >= MIN_PASSWORD_LENGTH) {
+            resetPassword({ newPassword: password, token });
+          }
         }}
       >
         <FieldGroup>
