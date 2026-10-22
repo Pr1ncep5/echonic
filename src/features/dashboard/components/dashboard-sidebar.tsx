@@ -8,8 +8,8 @@ import { VoiceCreateDialog } from "@/features/voices/components/voice-create-dia
 import { useState } from "react";
 
 import { usePathname } from "next/navigation";
-import { AuthUIContext, OrganizationSwitcher, UserButton } from "@daveyplate/better-auth-ui";
-import { useContext } from "react";
+import { UserMenu } from "@/features/account/components/user-menu";
+import { OrganizationSwitcher } from "@/features/organizations/components/organization-switcher";
 import {
   Sidebar,
   SidebarContent,
@@ -24,7 +24,6 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { Skeleton } from "@/components/ui/skeleton";
 
 import {
   type LucideIcon,
@@ -35,7 +34,6 @@ import {
   Settings,
   Headphones,
 } from "lucide-react";
-import { useRouter } from "next/navigation";
 
 interface MenuItem {
   title: string;
@@ -98,11 +96,6 @@ function NavSection({ label, items, pathname }: NavSectionProps) {
 
 export function DashboardSidebar() {
   const pathname = usePathname();
-  const router = useRouter();
-
-  const { hooks } = useContext(AuthUIContext);
-  const { isPending: isSessionPending } = hooks.useSession();
-  const { isPending: isOrgsPending } = hooks.useListOrganizations();
 
   const [voiceDialogOpen, setVoiceDialogOpen] = useState(false);
 
@@ -132,8 +125,8 @@ export function DashboardSidebar() {
   const othersMenuItems: MenuItem[] = [
     {
       title: "Settings",
+      url: "/settings",
       icon: Settings,
-      onClick: () => router.push("/account/organizations"),
     },
     {
       title: "Help and support",
@@ -162,31 +155,7 @@ export function DashboardSidebar() {
 
           <SidebarMenu>
             <SidebarMenuItem>
-              {isSessionPending || isOrgsPending ? (
-                <Skeleton className="h-8.5 w-full group-data-[collapsible=icon]:size-8 rounded-md border bg-white" />
-              ) : (
-                <OrganizationSwitcher
-                  hidePersonal
-                  className="w-full justify-between bg-white border border-border rounded-md pl-1 pr-2 py-1 gap-3 shadow-[0px_1px_1.5px_0px_rgba(44,54,53,0.03)] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! [&>svg.ml-auto]:group-data-[collapsible=icon]:hidden"
-                  classNames={{
-                    trigger: {
-                      organization: {
-                        base: "gap-2",
-                        avatar: {
-                          image: "size-6 rounded-sm",
-                          fallback: "size-6 rounded-sm",
-                        },
-                        content: "group-data-[collapsible=icon]:hidden",
-                        title: "text-[13px] tracking-tight font-medium text-foreground",
-                        subtitle: "text-xs tracking-tight text-foreground",
-                      },
-                    },
-                    content: {
-                      menuItem: "cursor-pointer",
-                    },
-                  }}
-                />
-              )}
+              <OrganizationSwitcher />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarHeader>
@@ -205,26 +174,7 @@ export function DashboardSidebar() {
 
           <SidebarMenu>
             <SidebarMenuItem>
-              {isSessionPending ? (
-                <Skeleton className="h-8.5 w-full group-data-[collapsible=icon]:size-8 rounded-md border border-border bg-white" />
-              ) : (
-                <UserButton
-                  className="w-full justify-between bg-white border border-border rounded-md pl-1 pr-2 py-1 shadow-[0px_1px_1.5px_0px_rgba(44,54,53,0.03)] group-data-[collapsible=icon]:size-8! group-data-[collapsible=icon]:p-0! group-data-[collapsible=icon]:justify-center! [&>svg.ml-auto]:group-data-[collapsible=icon]:hidden [--border:color-mix(in_srgb,transparent,var(--clerk-color-neutral,#000000)_15%)]"
-                  classNames={{
-                    trigger: {
-                      user: {
-                        base: "flex-row-reverse gap-2",
-                        content: "group-data-[collapsible=icon]:hidden",
-                        title: "text-[13px] tracking-tight font-medium text-foreground",
-                        subtitle: "hidden",
-                      },
-                    },
-                    content: {
-                      menuItem: "cursor-pointer",
-                    },
-                  }}
-                />
-              )}
+              <UserMenu />
             </SidebarMenuItem>
           </SidebarMenu>
         </SidebarFooter>

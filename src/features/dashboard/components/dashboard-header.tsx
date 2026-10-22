@@ -3,13 +3,12 @@
 import { Headphones, ThumbsUp } from "lucide-react";
 import Link from "next/link";
 
+import { useSession } from "@better-auth-ui/react";
 import { Button } from "@/components/ui/button";
-import { AuthUIContext } from "@daveyplate/better-auth-ui";
-import { useContext } from "react";
+import { authClient } from "@/lib/auth-client";
 
 export function DashboardHeader() {
-  const { hooks } = useContext(AuthUIContext);
-  const { data: session, isPending } = hooks.useSession();
+  const { data: session, isPending } = useSession(authClient);
   const user = session?.user;
 
   return (
