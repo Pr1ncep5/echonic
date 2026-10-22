@@ -5,7 +5,7 @@ import { getOrgSession } from "@/lib/org-membership";
 import { getSignedAudioUrl } from "@/lib/r2";
 import { audioResponseHeaders } from "@/lib/audio-content-type";
 
-export async function GET(request: Request, { params }: { params: Promise<{ voiceId: string }> }) {
+export async function GET(request: Request, { params }: RouteContext<"/api/voices/[voiceId]">) {
   const orgSession = await getOrgSession(request.headers);
   if (!orgSession) {
     return new Response("Unauthorized", { status: 401 });

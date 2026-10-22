@@ -3,9 +3,7 @@ import { trpc, HydrateClient, prefetch } from "@/trpc/server";
 
 export default async function TextToSpeechDetailPage({
   params,
-}: {
-  params: Promise<{ generationId: string }>;
-}) {
+}: PageProps<"/text-to-speech/[generationId]">) {
   const { generationId } = await params;
 
   prefetch(trpc.generations.getById.queryOptions({ id: generationId }));
