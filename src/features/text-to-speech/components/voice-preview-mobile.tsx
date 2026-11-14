@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { VoiceAvatar } from "@/components/voice-avatar/voice-avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 
+import { downloadGeneration } from "../lib/download-generation";
+
 type VoicePreviewMobileVoice = {
   id?: string;
   name: string;
@@ -63,26 +65,12 @@ export function VoicePreviewMobile({
     if (isPlaying) {
       audio.pause();
     } else {
-      audio.play();
+      // Rejected when the browser blocks playback; the button then simply stays on "play".
+      audio.play().catch(() => {});
     }
   };
 
-  const handleDownload = () => {
-    const safeName =
-      text
-        .slice(0, 50)
-        .trim()
-        .replace(/[^a-zA-Z0-9]+/g, "-")
-        .replace(/^-|-$/g, "")
-        .toLowerCase() || "speech";
-
-    const link = document.createElement("a");
-    link.href = audioUrl;
-    link.download = `${safeName}.wav`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-  };
+  const handleDownload = () => downloadGeneration(audioUrl, text);
 
   if (!audioUrl) return null;
 
@@ -107,10 +95,16 @@ export function VoicePreviewMobile({
         </div>
 
         <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={handleDownload}>
+          <Button variant="ghost" size="icon" aria-label="Download" onClick={handleDownload}>
             <Download className="size-4" />
           </Button>
-          <Button variant="default" size="icon" className="rounded-full" onClick={togglePlayPause}>
+          <Button
+            variant="default"
+            size="icon"
+            className="rounded-full"
+            aria-label={isPlaying ? "Pause" : "Play"}
+            onClick={togglePlayPause}
+          >
             {isPlaying ? (
               <Pause className="fill-background" />
             ) : (
