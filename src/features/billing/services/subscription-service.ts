@@ -1,8 +1,7 @@
 import { Effect } from "effect";
-import { after } from "next/server";
-import * as Sentry from "@sentry/nextjs";
 
 import { isPolarNotFound, polar } from "@/lib/polar";
+import type { OutboxTask } from "@/features/outbox/domain/tasks";
 import { BillingServiceError, SubscriptionRequiredError } from "../domain/errors";
 
 export type CustomerState = Awaited<ReturnType<typeof polar.customers.getStateExternal>>;
@@ -54,43 +53,35 @@ export function verifySubscription(
 }
 
 /**
- * Ingests a Polar usage event after the paid work has succeeded.
- * Never fails: a metering outage must not undo work the customer already received.
+ * The outbox task that reports a Usage event to Polar. Insert it in the same transaction
+ * as the row for the paid work: the event is then recorded if and only if the work was,
+ * and a Polar outage delays billing instead of losing it.
  */
-export function recordUsageEvent(orgId: string, event: UsageEvent): Effect.Effect<void> {
-  return Effect.tryPromise(() =>
-    polar.events.ingest({
-      events: [
-        {
-          name: event.name,
-          external_id: event.externalId,
-          external_customer_id: orgId,
-          metadata: event.metadata ?? {},
-          timestamp: new Date().toISOString(),
-        },
-      ],
-    }),
-  ).pipe(
-    Effect.asVoid,
-    Effect.catch((error) =>
-      Effect.sync(() =>
-        Sentry.logger.warn("Failed to ingest Polar usage event", {
-          orgId,
-          eventName: event.name,
-          externalId: event.externalId,
-          error,
-        }),
-      ),
-    ),
-  );
+export function usageEventTask(orgId: string, event: UsageEvent): OutboxTask {
+  return {
+    kind: "USAGE_EVENT",
+    payload: {
+      orgId,
+      name: event.name,
+      externalId: event.externalId,
+      metadata: event.metadata ?? {},
+      occurredAt: new Date().toISOString(),
+    },
+  };
 }
 
 /**
- * Records a usage event once the response has been sent, without delaying it.
- * Uses Next's `after` rather than a detached fiber: serverless hosts can freeze the
- * instance as soon as the response is sent, losing the event, while `after` keeps the
- * request alive until it finishes. Must be called while handling a request.
+ * Ends every active Subscription of an Organization immediately. Used before the
+ * Organization is deleted, because afterwards nobody could reach its billing portal.
  */
-export function scheduleUsageEvent(orgId: string, event: UsageEvent): Effect.Effect<void> {
-  return Effect.sync(() => after(() => Effect.runPromise(recordUsageEvent(orgId, event))));
+export function revokeSubscriptions(orgId: string): Effect.Effect<void, BillingServiceError> {
+  return Effect.gen(function* () {
+    const state = yield* getCustomerState(orgId);
+    for (const subscription of state?.active_subscriptions ?? []) {
+      yield* Effect.tryPromise({
+        try: () => polar.subscriptions.revoke(subscription.id),
+        catch: (cause) => new BillingServiceError({ orgId, cause }),
+      });
+    }
+  });
 }

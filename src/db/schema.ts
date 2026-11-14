@@ -11,6 +11,7 @@ import {
   varchar,
   bigint,
   doublePrecision,
+  jsonb,
 } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 
@@ -45,6 +46,13 @@ export const voice = pgTable(
     variant: voiceVariantEnum("variant").notNull(),
     r2ObjectKey: text("r2_object_key"),
 
+    // Who confirmed they have the right to clone this voice, and when. Null for System voices
+    // and for Custom voices created before consent was recorded.
+    consentedAt: timestamp("consented_at"),
+    consentedByUserId: text("consented_by_user_id").references(() => user.id, {
+      onDelete: "set null",
+    }),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -77,6 +85,10 @@ export const generation = pgTable(
     topK: integer("top_k").notNull(),
     repetitionPenalty: doublePrecision("repetition_penalty").notNull(),
 
+    // Sent by the client once per submit, so a retried request returns the first Generation
+    // instead of generating and billing again.
+    idempotencyKey: text("idempotency_key"),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
     updatedAt: timestamp("updated_at")
       .defaultNow()
@@ -84,9 +96,37 @@ export const generation = pgTable(
       .notNull(),
   },
   (table) => [
-    index("generation_org_id_idx").on(table.orgId),
+    // Serves the history list (newest first) and the per-Organization rate limit.
+    index("generation_org_created_idx").on(table.orgId, table.createdAt),
     index("generation_voice_id_idx").on(table.voiceId),
+    uniqueIndex("generation_org_idempotency_uidx").on(table.orgId, table.idempotencyKey),
   ],
+);
+
+export const outboxKindEnum = pgEnum("outbox_kind", [
+  "R2_DELETE",
+  "R2_DELETE_PREFIX",
+  "USAGE_EVENT",
+]);
+
+/**
+ * Side effects on external services (R2, Polar) that must eventually happen. A row is
+ * written in the same transaction as the change that causes it and removed once the
+ * side effect succeeds. See docs/adr/0002-outbox-for-external-side-effects.md.
+ */
+export const outbox = pgTable(
+  "outbox",
+  {
+    id: text("id")
+      .primaryKey()
+      .$defaultFn(() => createId()),
+    kind: outboxKindEnum("kind").notNull(),
+    payload: jsonb("payload").notNull(),
+    attempts: integer("attempts").default(0).notNull(),
+    availableAt: timestamp("available_at").defaultNow().notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [index("outbox_available_at_idx").on(table.availableAt)],
 );
 
 export const voiceRelations = relations(voice, ({ one, many }) => ({

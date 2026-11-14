@@ -29,6 +29,8 @@ export const env = createEnv({
     POLAR_SERVER: z.enum(["sandbox", "production"]).default("sandbox"),
     POLAR_PRODUCT_ID: z.string().min(1),
 
+    CRON_SECRET: z.string().min(32).optional(),
+
     // Optional so the app boots without it; email-based auth flows fail until it is set.
     RESEND_API_KEY: z.string().min(1).optional(),
     // resend.dev can only deliver to the Resend account owner; need a verified domain in production.
