@@ -31,6 +31,7 @@ import { useTRPC } from "@/trpc/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Field, FieldError } from "@/components/ui/field";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
@@ -51,6 +52,11 @@ import {
 } from "@/components/ui/command";
 import { VOICE_CATEGORIES, VOICE_CATEGORY_LABELS } from "@/features/voices/data/voice-categories";
 import { VoiceRecorder } from "@/features/voices/components/voice-recorder";
+import {
+  MAX_UPLOAD_SIZE_BYTES,
+  VOICE_DESCRIPTION_MAX_LENGTH,
+  VOICE_NAME_MAX_LENGTH,
+} from "@/features/voices/data/upload-limits";
 
 const LANGUAGE_OPTIONS = locales.all
   .filter((l) => l.tag && l.tag.includes("-") && l.name)
@@ -59,15 +65,30 @@ const LANGUAGE_OPTIONS = locales.all
     label: l.location ? `${l.name} (${l.location})` : l.name,
   }));
 
+const createVoiceErrorSchema = z.object({
+  error: z.string().optional(),
+  code: z.string().optional(),
+});
+
 const voiceCreateFormSchema = z.object({
-  name: z.string().min(1, "Name is required"),
+  name: z
+    .string()
+    .trim()
+    .min(1, "Name is required")
+    .max(VOICE_NAME_MAX_LENGTH, `Name must be at most ${VOICE_NAME_MAX_LENGTH} characters`),
   file: z
     .instanceof(File, { message: "An audio file is required" })
     .nullable()
     .refine((f) => f !== null, "An audio file is required"),
   category: z.string().min(1, "A category is required"),
   language: z.string().min(1, "A language is required"),
-  description: z.string(),
+  description: z
+    .string()
+    .max(
+      VOICE_DESCRIPTION_MAX_LENGTH,
+      `Description must be at most ${VOICE_DESCRIPTION_MAX_LENGTH} characters`,
+    ),
+  consent: z.boolean().refine((given) => given, "Confirm that you may clone this voice"),
 });
 
 type VoiceCreateFormValues = z.input<typeof voiceCreateFormSchema>;
@@ -85,7 +106,7 @@ function FileDropzone({
 
   const { getRootProps, getInputProps, isDragActive, isDragReject } = useDropzone({
     accept: { "audio/*": [] },
-    maxSize: 20 * 1024 * 1024,
+    maxSize: MAX_UPLOAD_SIZE_BYTES,
     multiple: false,
     onDrop: (acceptedFiles) => {
       if (acceptedFiles.length > 0) {
@@ -219,7 +240,17 @@ function LanguageCombobox({
 interface VoiceCreateFormProps {
   scrollable?: boolean;
   footer?: (submit: React.ReactNode) => React.ReactNode;
-  onError?: (message: string) => void;
+  /** `code` is set for failures the caller handles specially, e.g. SUBSCRIPTION_REQUIRED. */
+  onError?: (message: string, code?: string) => void;
+}
+
+class CreateVoiceRequestError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+  ) {
+    super(message);
+  }
 }
 
 export function VoiceCreateForm({ scrollable, footer, onError }: VoiceCreateFormProps) {
@@ -244,6 +275,8 @@ export function VoiceCreateForm({ scrollable, footer, onError }: VoiceCreateForm
         name,
         category,
         language,
+        // Only sent after the form's consent checkbox has been ticked.
+        consent: "true",
       });
       if (description) {
         params.set("description", description);
@@ -256,8 +289,11 @@ export function VoiceCreateForm({ scrollable, footer, onError }: VoiceCreateForm
       });
 
       if (!response.ok) {
-        const body = await response.json();
-        throw new Error(body.error ?? "Failed to create voice");
+        const body = createVoiceErrorSchema.safeParse(await response.json().catch(() => null));
+        throw new CreateVoiceRequestError(
+          body.data?.error ?? "Failed to create voice",
+          body.data?.code,
+        );
       }
 
       return response.json();
@@ -270,6 +306,7 @@ export function VoiceCreateForm({ scrollable, footer, onError }: VoiceCreateForm
     category: "GENERAL",
     language: "en-US",
     description: "",
+    consent: false,
   };
 
   const form = useForm({
@@ -298,7 +335,7 @@ export function VoiceCreateForm({ scrollable, footer, onError }: VoiceCreateForm
         const message = error instanceof Error ? error.message : "Failed to create voice";
 
         if (onError) {
-          onError(message);
+          onError(message, error instanceof CreateVoiceRequestError ? error.code : undefined);
         } else {
           toast.error(message);
         }
@@ -374,7 +411,9 @@ export function VoiceCreateForm({ scrollable, footer, onError }: VoiceCreateForm
                   </div>
                   <Input
                     id={field.name}
-                    placeholder="Voice Label"
+                    placeholder="Voice name"
+                    aria-label="Voice name"
+                    maxLength={VOICE_NAME_MAX_LENGTH}
                     aria-invalid={isInvalid}
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -446,6 +485,8 @@ export function VoiceCreateForm({ scrollable, footer, onError }: VoiceCreateForm
                   <Textarea
                     id={field.name}
                     placeholder="Describe this voice..."
+                    aria-label="Description"
+                    maxLength={VOICE_DESCRIPTION_MAX_LENGTH}
                     aria-invalid={isInvalid}
                     value={field.state.value}
                     onChange={(e) => field.handleChange(e.target.value)}
@@ -460,6 +501,32 @@ export function VoiceCreateForm({ scrollable, footer, onError }: VoiceCreateForm
           }}
         </form.Field>
 
+        <form.Field name="consent">
+          {(field) => {
+            const isInvalid = field.state.meta.isTouched && !field.state.meta.isValid;
+
+            return (
+              <Field data-invalid={isInvalid}>
+                <label htmlFor={field.name} className="flex items-start gap-3 text-sm leading-snug">
+                  <Checkbox
+                    id={field.name}
+                    className="mt-0.5"
+                    checked={field.state.value}
+                    aria-invalid={isInvalid}
+                    onCheckedChange={(checked) => field.handleChange(checked === true)}
+                    onBlur={field.handleBlur}
+                  />
+                  <span className="text-muted-foreground">
+                    This is my own voice, or I have the speaker&apos;s permission to clone it. I
+                    won&apos;t use it to impersonate anyone or to mislead.
+                  </span>
+                </label>
+                {isInvalid && <FieldError errors={field.state.meta.errors} />}
+              </Field>
+            );
+          }}
+        </form.Field>
+
         <form.Subscribe
           selector={(s) => ({
             isSubmitting: s.isSubmitting,
@@ -468,7 +535,7 @@ export function VoiceCreateForm({ scrollable, footer, onError }: VoiceCreateForm
           {({ isSubmitting }) => {
             const submitButton = (
               <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Creating..." : "Create Voice"}
+                {isSubmitting ? "Creating..." : "Create voice"}
               </Button>
             );
 

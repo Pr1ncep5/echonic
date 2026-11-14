@@ -29,6 +29,7 @@ import type { inferRouterOutputs } from "@trpc/server";
 import type { AppRouter } from "@/trpc/routers/_app";
 import { VOICE_CATEGORY_LABELS } from "@/features/voices/data/voice-categories";
 import { useAudioPlayback } from "@/hooks/use-audio-playback";
+import { useCanManageOrganization } from "@/features/organizations/hooks/use-can-manage-organization";
 import { useTRPC } from "@/trpc/client";
 import { useState } from "react";
 
@@ -55,6 +56,8 @@ function parseLanguage(locale: string) {
 
 export function VoiceCard({ voice }: VoiceCardProps) {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  // Only owners and admins may delete a Custom voice; the server enforces it too.
+  const canDelete = useCanManageOrganization() && voice.variant === "CUSTOM";
   const { flag, region, countryCode } = parseLanguage(voice.language);
 
   const audioSrc = `/api/voices/${encodeURIComponent(voice.id)}`;
@@ -85,7 +88,7 @@ export function VoiceCard({ voice }: VoiceCardProps) {
           <VoiceAvatar
             seed={voice.id}
             name={voice.name}
-            className="size-14 border-[1.5px] border-white shadow-xs lg:size-18"
+            className="size-14 border-[1.5px] border-background shadow-xs lg:size-18"
           />
         </div>
       </div>
@@ -94,7 +97,9 @@ export function VoiceCard({ voice }: VoiceCardProps) {
         <div className="flex items-center gap-1.5 line-clamp-1 text-sm font-medium tracking-tight">
           {voice.name}
           <span className="size-1 shrink-0 rounded-full bg-muted-foreground/50" />
-          <span className="text-[#327c88]">{VOICE_CATEGORY_LABELS[voice.category]}</span>
+          <span className="font-normal text-muted-foreground">
+            {VOICE_CATEGORY_LABELS[voice.category]}
+          </span>
         </div>
 
         <p className="line-clamp-1 text-xs text-muted-foreground">{voice.description}</p>
@@ -122,6 +127,7 @@ export function VoiceCard({ voice }: VoiceCardProps) {
           className="rounded-full"
           onClick={togglePlay}
           disabled={isLoading}
+          aria-label={isPlaying ? `Pause ${voice.name}` : `Play ${voice.name}`}
         >
           {isLoading ? (
             <Spinner className="size-4" />
@@ -133,7 +139,12 @@ export function VoiceCard({ voice }: VoiceCardProps) {
         </Button>
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="icon-sm" className="rounded-full">
+            <Button
+              variant="outline"
+              size="icon-sm"
+              className="rounded-full"
+              aria-label={`More actions for ${voice.name}`}
+            >
               <MoreHorizontal className="size-4" />
             </Button>
           </DropdownMenuTrigger>
@@ -144,7 +155,7 @@ export function VoiceCard({ voice }: VoiceCardProps) {
                 <span className="font-medium">Use this voice</span>
               </Link>
             </DropdownMenuItem>
-            {voice.variant === "CUSTOM" && (
+            {canDelete && (
               <DropdownMenuItem
                 onClick={() => setShowDeleteDialog(true)}
                 className="text-destructive focus:text-destructive"
@@ -156,14 +167,14 @@ export function VoiceCard({ voice }: VoiceCardProps) {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {voice.variant === "CUSTOM" && (
+        {canDelete && (
           <AlertDialog open={showDeleteDialog} onOpenChange={setShowDeleteDialog}>
             <AlertDialogContent>
               <AlertDialogHeader>
                 <AlertDialogTitle>Delete voice</AlertDialogTitle>
                 <AlertDialogDescription>
-                  Are you sure you want to delete &quot;{voice.name}&quot;? This action cannot be
-                  undone.
+                  Delete &quot;{voice.name}&quot; for everyone in your organization? Existing
+                  generations are kept. This can&apos;t be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
 

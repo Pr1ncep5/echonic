@@ -38,9 +38,10 @@ export function VoiceCreateDialog({ children, open, onOpenChange }: VoiceCreateD
   const { checkout } = useCheckout();
 
   const handleError = useCallback(
-    (message: string) => {
-      if (message === "SUBSCRIPTION_REQUIRED") {
+    (message: string, code?: string) => {
+      if (code === "SUBSCRIPTION_REQUIRED") {
         toast.error("Subscription required", {
+          description: "Your organization needs a subscription to clone a voice.",
           action: {
             label: "Subscribe",
             onClick: () => checkout(),
@@ -61,7 +62,7 @@ export function VoiceCreateDialog({ children, open, onOpenChange }: VoiceCreateD
           <DrawerHeader>
             <DrawerTitle>Create custom voice</DrawerTitle>
             <DrawerDescription>
-              Upload or record an audio sample to add a new voice to your library.
+              Upload or record an audio sample to clone a voice for your organization.
             </DrawerDescription>
           </DrawerHeader>
 
@@ -89,7 +90,7 @@ export function VoiceCreateDialog({ children, open, onOpenChange }: VoiceCreateD
         <DialogHeader className="text-left">
           <DialogTitle>Create custom voice</DialogTitle>
           <DialogDescription>
-            Upload or record an audio sample to add a new voice to your library.
+            Upload or record an audio sample to clone a voice for your organization.
           </DialogDescription>
         </DialogHeader>
 
