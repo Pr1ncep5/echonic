@@ -1,8 +1,10 @@
 import { auth } from "@/lib/auth";
 import { getMemberRole } from "@/lib/org-membership";
+import { hasRole } from "@/features/organizations/data/member-roles";
 import { initTRPC, TRPCError } from "@trpc/server";
 import superjson from "superjson";
-import * as Sentry from "@sentry/node";
+import * as Sentry from "@sentry/nextjs";
+import { appError, getAppErrorCode } from "./app-error";
 
 /**
  * This context creator accepts `headers` so it can be reused in both
@@ -30,13 +32,14 @@ const t = initTRPC.context<Awaited<ReturnType<typeof createTRPCContext>>>().crea
    * @see https://trpc.io/docs/server/data-transformers
    */
   transformer: superjson,
+  errorFormatter: ({ shape, error }) => ({
+    ...shape,
+    data: { ...shape.data, appCode: getAppErrorCode(error) },
+  }),
 });
 
-const sentryMiddleware = t.middleware(
-  Sentry.trpcMiddleware({
-    attachRpcInput: true,
-  }),
-);
+// Inputs are not attached: they contain the text users generate speech from.
+const sentryMiddleware = t.middleware(Sentry.trpcMiddleware({ attachRpcInput: false }));
 
 // Base router and procedure helpers
 export const createTRPCRouter = t.router;
@@ -82,4 +85,15 @@ export const orgProcedure = protectedProcedure.use(async ({ ctx, next }) => {
       role,
     },
   });
+});
+
+/**
+ * Organization procedure for owners and admins only: billing, and deleting what the
+ * whole Organization depends on (Custom voices).
+ */
+export const orgAdminProcedure = orgProcedure.use(async ({ ctx, next }) => {
+  if (!hasRole(ctx.role, "owner", "admin")) {
+    throw appError("ROLE_REQUIRED", "FORBIDDEN", "Only owners and admins can do this.");
+  }
+  return next();
 });

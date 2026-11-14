@@ -1,16 +1,16 @@
 import { TRPCError } from "@trpc/server";
-import { Effect } from "effect";
-import * as Sentry from "@sentry/nextjs";
 import { polar } from "@/lib/polar";
 import { env } from "@/lib/env";
 import {
   getCustomerState,
   hasActiveSubscription,
 } from "@/features/billing/services/subscription-service";
-import { createTRPCRouter, orgProcedure } from "../init";
+import { createTRPCRouter, orgAdminProcedure, orgProcedure } from "../init";
+import { runEffect } from "../run-effect";
 
 export const billingsRouter = createTRPCRouter({
-  createCheckout: orgProcedure.mutation(async ({ ctx }) => {
+  // Billing is managed by owners and admins only.
+  createCheckout: orgAdminProcedure.mutation(async ({ ctx }) => {
     const result = await polar.checkouts.create({
       products: [env.POLAR_PRODUCT_ID],
       external_customer_id: ctx.orgId,
@@ -27,7 +27,7 @@ export const billingsRouter = createTRPCRouter({
     return { checkoutUrl: result.url };
   }),
 
-  createPortalSession: orgProcedure.mutation(async ({ ctx }) => {
+  createPortalSession: orgAdminProcedure.mutation(async ({ ctx }) => {
     const result = await polar.customerSessions.create({
       external_customer_id: ctx.orgId,
     });
@@ -43,20 +43,14 @@ export const billingsRouter = createTRPCRouter({
   }),
 
   getStatus: orgProcedure.query(async ({ ctx }) => {
-    const customerState = await Effect.runPromise(
-      getCustomerState(ctx.orgId).pipe(
-        Effect.tapError((error) =>
-          Effect.sync(() => Sentry.captureException(error.cause, { tags: { orgId: ctx.orgId } })),
-        ),
-        Effect.mapError(
-          () =>
-            new TRPCError({
-              code: "INTERNAL_SERVER_ERROR",
-              message: "Failed to communicate with billing service",
-            }),
-        ),
-      ),
-    );
+    const customerState = await runEffect(getCustomerState(ctx.orgId), {
+      toTRPCError: () =>
+        new TRPCError({
+          code: "INTERNAL_SERVER_ERROR",
+          message: "Failed to communicate with billing service",
+        }),
+      tags: { orgId: ctx.orgId },
+    });
 
     // Sum up estimated costs from all meters across active subscriptions
     let estimatedCostCents = 0;
