@@ -4,7 +4,7 @@ import { beforeEach, vi } from "vitest";
 import { db } from "@/db";
 import { organization, outbox, rateLimit, user, verification, voice } from "@/db/schema";
 import { env } from "@/lib/env";
-import { resetExternal } from "./external";
+import { fakeFetch, resetExternal } from "./external";
 import { signOut } from "./session";
 
 // Tests empty every table. Refuse to run against anything but the throwaway database.
@@ -27,6 +27,8 @@ vi.mock("next/server", async (importOriginal) => {
 
 // External services: no test may reach the network. The stand-ins live in ./external
 // and are only imported here, never created here (see the note in that file).
+vi.stubGlobal("fetch", fakeFetch);
+
 vi.mock("@/lib/r2", async (importOriginal) => {
   const { fakeR2 } = await import("./external");
   return { ...(await importOriginal<typeof import("@/lib/r2")>()), ...fakeR2 };
@@ -45,8 +47,9 @@ vi.mock("@/lib/chatterbox-client", async () => {
 beforeEach(async () => {
   signOut();
   resetExternal();
-  // Forgets recorded calls but keeps the default behaviour given to the mocks above.
-  vi.clearAllMocks();
+  // Forgets recorded calls and whatever a test told a stand-in to do, and puts back the
+  // default behaviour it was created with.
+  vi.resetAllMocks();
   // CASCADE reaches every table that references these, which is all the others.
   await db.execute(
     sql`truncate table ${organization}, ${user}, ${voice}, ${outbox}, ${verification}, ${rateLimit} cascade`,

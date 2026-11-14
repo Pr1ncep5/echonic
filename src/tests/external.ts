@@ -63,17 +63,30 @@ export const fakePolar = {
   },
 };
 
+/** What the Chatterbox client returns for an HTTP error with this status. */
+export function chatterboxFailure(status: number) {
+  return {
+    data: undefined,
+    error: { detail: "Chatterbox failed" },
+    response: new Response(null, { status }),
+  };
+}
+
 export const chatterboxPost = vi.fn<(path: string, init: unknown) => Promise<unknown>>(async () =>
   chatterboxFailureStatus === null
     ? { data: new ArrayBuffer(16), error: undefined, response: new Response(null, { status: 200 }) }
-    : {
-        data: undefined,
-        error: { detail: "Chatterbox failed" },
-        response: new Response(null, { status: chatterboxFailureStatus }),
-      },
+    : chatterboxFailure(chatterboxFailureStatus),
 );
 
 export const fakeChatterbox = { POST: chatterboxPost };
+
+/**
+ * Replaces the global `fetch`. The app's only use of it is reading stored audio back from
+ * R2, so by default it answers with a small audio body.
+ */
+export const fakeFetch = vi.fn<typeof fetch>(
+  async () => new Response("audio", { headers: { "content-type": "audio/wav" } }),
+);
 
 /** Replaces the functions of `@/lib/r2`; tests reach them with `vi.mocked(uploadAudio)`. */
 export const fakeR2 = {
