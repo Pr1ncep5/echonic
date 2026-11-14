@@ -1,2 +1,4 @@
 export const MAX_UPLOAD_SIZE_BYTES = 20 * 1024 * 1024; // 20 MB
 export const MIN_AUDIO_DURATION_SECONDS = 10;
+export const VOICE_NAME_MAX_LENGTH = 64;
+export const VOICE_DESCRIPTION_MAX_LENGTH = 500;
