@@ -9,7 +9,7 @@ export async function POST(request: Request) {
   if (!orgSession) {
     return Response.json({ error: "Unauthorized" }, { status: 401 });
   }
-  const { orgId } = orgSession;
+  const { orgId, userId } = orgSession;
 
   const url = new URL(request.url);
 
@@ -20,11 +20,12 @@ export async function POST(request: Request) {
         category: url.searchParams.get("category"),
         language: url.searchParams.get("language"),
         description: url.searchParams.get("description"),
+        consent: url.searchParams.get("consent"),
       },
       contentTypeHeader: request.headers.get("content-type"),
       body: request.body,
     },
-    { orgId },
+    { orgId, userId },
   ).pipe(
     Effect.map(({ name }) =>
       Response.json({ name, message: "Voice created successfully" }, { status: 201 }),
