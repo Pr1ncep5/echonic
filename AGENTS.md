@@ -28,7 +28,7 @@ Vitest, against a real Postgres. Run `bun run test` together with `bun run check
 - A test file sits next to what it tests: `voices.ts` → `voices.test.ts`. Shared helpers live in `src/tests/`.
 - Test through the public entry point: the tRPC caller (`callerAs` in `src/tests/trpc.ts`) or the Route Handler's exported function. Sign in with `signInAs`, create rows with `src/tests/factories.ts`.
 - The database is real and emptied before each test. Never mock `@/db`.
-- Only what leaves our system is replaced, in `src/tests/setup.ts`: the Better Auth session, R2, Polar, Chatterbox and Next's `after`. Add a new external service there, not in individual tests.
+- Only what leaves our system is replaced, in `src/tests/setup.ts`: the Better Auth session, R2, Polar, Chatterbox and Next's `after`. Add a new external service there, not in individual tests: the app's modules are loaded once for the whole run, so a `vi.mock` in one test file leaks into the files after it. Create the stand-in itself in `src/tests/external.ts`, never inside a `vi.mock` factory.
 - Every test starts with no Subscription and a working Chatterbox. Say otherwise with `givenSubscription`, `givenPolarOutage` or `givenChatterboxFails` from `src/tests/external.ts`.
 - A new rule under "Domain rules" comes with a test named after the rule. Assert on what the caller sees and on the rows left behind, not on which functions were called.
 - No tests for components or for `src/components/ui`.
