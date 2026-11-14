@@ -18,6 +18,9 @@ import {
 import { sendEmailOrThrow } from "@/features/email/services/email-service";
 import { formatRole } from "@/features/organizations/data/member-roles";
 import { findSoleOwnedOrganizations } from "@/features/organizations/services/ownership-service";
+import { queueOrganizationAudioDeletion } from "@/features/organizations/services/organization-deletion-service";
+import { revokeSubscriptions } from "@/features/billing/services/subscription-service";
+import * as Sentry from "@sentry/nextjs";
 import { env } from "./env";
 
 export const auth = betterAuth({
@@ -41,6 +44,13 @@ export const auth = betterAuth({
         window: 3600,
         max: 3, // Anti-bot: Only 3 sign-ups per hour per IP
       },
+      // Each request sends an email, so the default for /sign-in/* (3 per 10 s) would let
+      // one client flood an inbox. Password-reset and verification emails are already
+      // limited to 3 per minute by Better Auth.
+      "/sign-in/magic-link": {
+        window: 60,
+        max: 3,
+      },
     },
   },
   advanced: {
@@ -50,11 +60,18 @@ export const auth = betterAuth({
   },
   emailAndPassword: {
     enabled: true,
+    // An unverified address proves nothing about who owns it, and invitations are matched
+    // by email. Google, GitHub and magic-link sign-ins arrive verified.
+    requireEmailVerification: true,
     // Also how Google/GitHub-only users add a password: resetting creates the credential account.
     sendResetPassword: ({ user, url }) => sendEmailOrThrow(user.email, resetPasswordEmail(url)),
     revokeSessionsOnPasswordReset: true,
   },
   emailVerification: {
+    sendOnSignUp: true,
+    // Accounts created before verification was required get their link when they sign in.
+    sendOnSignIn: true,
+    autoSignInAfterVerification: true,
     sendVerificationEmail: ({ user, url }) => sendEmailOrThrow(user.email, verifyEmailEmail(url)),
   },
   user: {
@@ -119,7 +136,24 @@ export const auth = betterAuth({
         ),
       // Better Auth only clears activeOrganizationId on the session of whoever removed the
       // member or deleted the organization, so clear it on every affected session here.
+      requireEmailVerificationOnInvitation: true,
       organizationHooks: {
+        // Once the Organization is gone nobody can open its billing portal, so its
+        // Subscription must end first. If Polar cannot be reached the deletion is refused
+        // rather than leaving a Subscription that keeps charging.
+        beforeDeleteOrganization: async ({ organization: org }) => {
+          await Effect.runPromise(
+            revokeSubscriptions(org.id).pipe(
+              Effect.mapError((error) => {
+                Sentry.captureException(error.cause, { tags: { orgId: org.id } });
+                return new APIError("BAD_GATEWAY", {
+                  message:
+                    "We couldn't cancel this organization's subscription, so it was not deleted. Please try again.",
+                });
+              }),
+            ),
+          );
+        },
         afterRemoveMember: async ({ member, organization: org }) => {
           await db
             .update(schema.session)
@@ -136,6 +170,19 @@ export const auth = betterAuth({
             .update(schema.session)
             .set({ activeOrganizationId: null })
             .where(eq(schema.session.activeOrganizationId, org.id));
+          // The Organization is already deleted, so a failure here must not surface as a
+          // failed deletion; it is reported so the audio can be removed by hand.
+          await Effect.runPromise(
+            queueOrganizationAudioDeletion(org.id).pipe(
+              Effect.catch((error) =>
+                Effect.sync(() =>
+                  Sentry.captureException(error.cause, {
+                    tags: { orgId: org.id, orphanedAudio: "organization" },
+                  }),
+                ),
+              ),
+            ),
+          );
         },
       },
     }),
