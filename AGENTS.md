@@ -20,6 +20,7 @@ IMPORTANT: Bun only. Never use npm, npx, yarn or pnpm. Use `bunx` for one-off to
 
 - `bun run test:db` — start the test database (Docker, port 5433); `bun run test:db:stop` to remove it
 - `bun run test` — run the tests once; `bun run test:watch` while working
+- `bun run e2e` — build the app and run the Playwright journeys (needs the test database and `.env.e2e` with the R2 test bucket)
 
 ## Tests
 
@@ -32,6 +33,12 @@ Vitest, against a real Postgres. Run `bun run test` together with `bun run check
 - Every test starts with no Subscription and a working Chatterbox. Say otherwise with `givenSubscription`, `givenPolarOutage` or `givenChatterboxFails` from `src/tests/external.ts`.
 - A new rule under "Domain rules" comes with a test named after the rule. Assert on what the caller sees and on the rows left behind, not on which functions were called.
 - No tests for components or for `src/components/ui`.
+
+End-to-end journeys live in `e2e/` and run with Playwright against the built app. Keep them few: one per journey a user would notice breaking, not one per rule (rules belong in Vitest).
+
+- The app talks to `e2e/fakes/server.ts` instead of Polar and Chatterbox, and to a real R2 test bucket. Steer the fake from a test with `e2e/support/fake.ts`; put `[fail]` in the text to make Chatterbox reject it.
+- Every journey starts signed in as the owner seeded in `e2e/support/seed.ts`. Journeys share one database and run one at a time, so a journey that changes shared state (the Subscription) puts it back in `beforeEach`.
+- Find elements the way a user does: by role and label, not by class or test id.
 
 Lint is oxlint, format is oxfmt. Do not hand-format or argue with them.
 
