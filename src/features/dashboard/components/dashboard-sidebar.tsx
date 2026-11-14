@@ -9,6 +9,7 @@ import { useState } from "react";
 
 import { usePathname } from "next/navigation";
 import { UserMenu } from "@/features/account/components/user-menu";
+import { SUPPORT_MAILTO } from "@/features/dashboard/data/support";
 import { OrganizationSwitcher } from "@/features/organizations/components/organization-switcher";
 import {
   Sidebar,
@@ -72,7 +73,7 @@ function NavSection({ label, items, pathname }: NavSectionProps) {
                 }
                 onClick={item.onClick}
                 tooltip={item.title}
-                className="h-9 px-3 py-2 text-[13px] tracking-tight font-medium border border-transparent data-[active=true]:border-border data-[active=true]:shadow-[0px_1px_1px_0px_rgba(44,54,53,0.03),inset_0px_0px_0px_2px_white]"
+                className="h-9 px-3 py-2 text-[13px] tracking-tight font-medium border border-transparent data-[active=true]:border-border data-[active=true]:bg-background data-[active=true]:shadow-xs"
               >
                 {item.url ? (
                   <Link href={item.url}>
@@ -106,7 +107,7 @@ export function DashboardSidebar() {
       icon: Home,
     },
     {
-      title: "Explore voices",
+      title: "Voices",
       url: "/voices",
       icon: LayoutGrid,
     },
@@ -130,7 +131,7 @@ export function DashboardSidebar() {
     },
     {
       title: "Help and support",
-      url: "mailto:business@echonic.com", // TODO: [EMAIL_ADDRESS]
+      url: SUPPORT_MAILTO,
       icon: Headphones,
     },
   ];

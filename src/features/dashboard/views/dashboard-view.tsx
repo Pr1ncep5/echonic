@@ -6,10 +6,10 @@ import { QuickActionsPanel } from "@/features/dashboard/components/quick-actions
 
 export function DashboardView() {
   return (
-    <div className="relative">
+    <div className="relative overflow-y-auto">
       <PageHeader title="Dashboard" className="lg:hidden" />
       <HeroPattern />
-      <div className="relative space-y-8 p-4 lg:p-16">
+      <div className="relative mx-auto max-w-5xl space-y-8 p-4 lg:px-8 lg:py-16">
         <DashboardHeader />
         <TextInputPanel />
         <QuickActionsPanel />
