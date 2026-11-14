@@ -11,6 +11,7 @@ import {
 } from "@/features/text-to-speech/components/text-to-speech-form";
 import { TTSVoicesProvider } from "../contexts/tts-voices-context";
 import { VoicePreviewPanel } from "../components/voice-preview-panel";
+import { PreviewArea } from "../components/preview-area";
 import { VoicePreviewMobile } from "../components/voice-preview-mobile";
 
 export function TextToSpeechDetailView({ generationId }: { generationId: string }) {
@@ -60,7 +61,13 @@ export function TextToSpeechDetailView({ generationId }: { generationId: string 
           <div className="flex min-h-0 flex-1 flex-col">
             <TextInputPanel />
             <VoicePreviewMobile audioUrl={data.audioUrl} voice={generationVoice} text={data.text} />
-            <VoicePreviewPanel audioUrl={data.audioUrl} voice={generationVoice} text={data.text} />
+            <PreviewArea>
+              <VoicePreviewPanel
+                audioUrl={data.audioUrl}
+                voice={generationVoice}
+                text={data.text}
+              />
+            </PreviewArea>
           </div>
           <SettingsPanel />
         </div>

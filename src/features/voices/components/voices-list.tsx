@@ -5,10 +5,11 @@ import type { VoiceItem } from "@/features/voices/components/voice-card";
 
 interface VoicesListProps {
   title: string;
+  emptyDescription: string;
   voices: VoiceItem[];
 }
 
-export function VoicesList({ title, voices }: VoicesListProps) {
+export function VoicesList({ title, emptyDescription, voices }: VoicesListProps) {
   if (!voices.length) {
     return (
       <div className="space-y-4">
@@ -31,9 +32,7 @@ export function VoicesList({ title, voices }: VoicesListProps) {
 
           <p className="text-lg font-semibold tracking-tight text-foreground">No voices found</p>
 
-          <p className="max-w-md text-center text-sm text-muted-foreground">
-            {title} will appear here
-          </p>
+          <p className="max-w-md text-center text-sm text-muted-foreground">{emptyDescription}</p>
         </div>
       </div>
     );

@@ -2,7 +2,18 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import WaveSurfer from "wavesurfer.js";
+import * as Sentry from "@sentry/nextjs";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { readThemeColor, subscribeToThemeClass } from "@/lib/theme-color";
+
+function waveformColors() {
+  const primary = readThemeColor("--primary") || "#c2410c";
+  return {
+    waveColor: readThemeColor("--border") || "#d4d4d8",
+    progressColor: primary,
+    cursorColor: primary,
+  };
+}
 
 interface UseWaveSurferOptions {
   url?: string;
@@ -49,9 +60,7 @@ export function useWaveSurfer({
 
     const ws = WaveSurfer.create({
       container: containerRef.current,
-      waveColor: "#96999D", // matches --muted-foreground
-      progressColor: "#4A8A9A", // matches --chart-1 (teal-cyan)
-      cursorColor: "#4A8A9A",
+      ...waveformColors(),
       cursorWidth: 2,
       barWidth: 2,
       barGap: 2,
@@ -79,13 +88,13 @@ export function useWaveSurfer({
 
     ws.on("error", (error) => {
       if (destroyed) return;
-      console.error("WaveSurfer error:", error);
+      Sentry.captureException(error);
       onError?.(new Error(String(error)));
     });
 
     ws.load(url).catch((error) => {
       if (destroyed) return;
-      console.error("WaveSurfer load error:", error);
+      Sentry.captureException(error);
       onError?.(new Error(String(error)));
     });
 
@@ -95,6 +104,12 @@ export function useWaveSurfer({
     };
   }, [url, autoplay, onReady, onError, isMobile]);
 
+  // Recolour in place when the theme changes; recreating would restart the audio.
+  useEffect(
+    () => subscribeToThemeClass(() => wavesurferRef.current?.setOptions(waveformColors())),
+    [],
+  );
+
   const togglePlayPause = useCallback(() => {
     wavesurferRef.current?.playPause();
   }, []);
@@ -103,16 +118,14 @@ export function useWaveSurfer({
     const ws = wavesurferRef.current;
     if (!ws) return;
 
-    const newTime = Math.min(ws.getCurrentTime() + seconds, ws.getDuration());
-    ws.seekTo(newTime / ws.getDuration());
+    ws.setTime(Math.min(ws.getCurrentTime() + seconds, ws.getDuration()));
   }, []);
 
   const seekBackward = useCallback((seconds = 5) => {
     const ws = wavesurferRef.current;
     if (!ws) return;
 
-    const newTime = Math.max(ws.getCurrentTime() - seconds, 0);
-    ws.seekTo(newTime / ws.getDuration());
+    ws.setTime(Math.max(ws.getCurrentTime() - seconds, 0));
   }, []);
 
   return {

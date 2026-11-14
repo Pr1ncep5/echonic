@@ -17,8 +17,10 @@ export function VoicesToolbar() {
   return (
     <div className="space-y-4">
       <div>
-        <h2 className="text-xl lg:text-2xl font-semibold tracking-tight">All Libraries</h2>
-        <p className="text-sm text-muted-foreground">Discover your voices, or make your own</p>
+        <h2 className="text-xl lg:text-2xl font-semibold tracking-tight">Voices</h2>
+        <p className="text-sm text-muted-foreground">
+          Use a system voice, or clone your own from an audio sample.
+        </p>
       </div>
 
       <div className="flex flex-col gap-3">
@@ -28,6 +30,7 @@ export function VoicesToolbar() {
               <Search className="size-4" />
             </InputGroupAddon>
             <InputGroupInput
+              aria-label="Search voices"
               placeholder="Search voices..."
               value={localQuery}
               onChange={(e) => {
@@ -36,17 +39,9 @@ export function VoicesToolbar() {
               }}
             />
           </InputGroup>
-          <div className="ml-auto hidden lg:block">
+          <div className="ml-auto">
             <VoiceCreateDialog>
               <Button size="sm">
-                <Sparkles />
-                Custom voice
-              </Button>
-            </VoiceCreateDialog>
-          </div>
-          <div className="lg:hidden">
-            <VoiceCreateDialog>
-              <Button size="sm" className="w-full">
                 <Sparkles />
                 Custom voice
               </Button>

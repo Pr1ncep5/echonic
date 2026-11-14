@@ -15,8 +15,16 @@ function VoicesContent() {
 
   return (
     <>
-      <VoicesList title="Team Voices" voices={data.custom} />
-      <VoicesList title="Built-in Voices" voices={data.system} />
+      <VoicesList
+        title="Custom voices"
+        emptyDescription="Voices your organization clones will appear here."
+        voices={data.custom}
+      />
+      <VoicesList
+        title="System voices"
+        emptyDescription="No system voice matches your search."
+        voices={data.system}
+      />
     </>
   );
 }
