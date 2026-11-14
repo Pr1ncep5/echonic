@@ -30,15 +30,19 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}>
+    // next-themes sets the theme class on <html> before hydration.
+    <html
+      lang="en"
+      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
+    >
       <body className="min-h-full flex flex-col">
         <TRPCReactProvider>
           <Providers>
             <NuqsAdapter>{children}</NuqsAdapter>
+            <Toaster />
           </Providers>
         </TRPCReactProvider>
-
-        <Toaster />
       </body>
     </html>
   );

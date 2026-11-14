@@ -14,7 +14,7 @@ export function VoiceAvatar({ seed, name, className }: VoiceAvatarProps) {
   const avatarUrl = useVoiceAvatar(seed);
 
   return (
-    <Avatar className={cn("size-4 border-white shadow-xs", className)}>
+    <Avatar className={cn("size-4 border-background shadow-xs", className)}>
       <AvatarImage src={avatarUrl} alt={name} />
       <AvatarFallback className="text-[8px]">{name.slice(0, 2).toUpperCase()}</AvatarFallback>
     </Avatar>

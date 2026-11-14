@@ -1,7 +1,8 @@
 "use client";
 
 import { useSession, useSignOut } from "@better-auth-ui/react";
-import { ChevronsUpDown, LogOut, Shield, UserRound } from "lucide-react";
+import { ChevronsUpDown, LogOut, Palette, Shield, UserRound } from "lucide-react";
+import { useTheme } from "next-themes";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { InitialsAvatar } from "@/components/initials-avatar";
@@ -11,7 +12,12 @@ import {
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
   DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { SidebarMenuButton, useSidebar } from "@/components/ui/sidebar";
@@ -21,6 +27,7 @@ import { authClient } from "@/lib/auth-client";
 export function UserMenu() {
   const router = useRouter();
   const { isMobile } = useSidebar();
+  const { theme, setTheme } = useTheme();
   const { data: session, isPending } = useSession(authClient);
   const { mutate: signOut } = useSignOut(authClient, {
     onSuccess: () => router.push("/auth/sign-in"),
@@ -75,6 +82,19 @@ export function UserMenu() {
               Security
             </Link>
           </DropdownMenuItem>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <Palette />
+              Theme
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              <DropdownMenuRadioGroup value={theme} onValueChange={setTheme}>
+                <DropdownMenuRadioItem value="light">Light</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="dark">Dark</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="system">System</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onSelect={() => signOut()}>
