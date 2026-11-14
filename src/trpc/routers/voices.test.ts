@@ -92,3 +92,31 @@ describe("Custom voices belong to one Organization; System voices to none", () =
     ]);
   });
 });
+
+describe("searching Voices", () => {
+  async function search(query: string) {
+    const org = await createOrganization();
+    await createSystemVoice({ name: "Narrator", description: "Calm and warm" });
+    await createSystemVoice({ name: "100% Real" });
+    await createSystemVoice({ name: "snake_case" });
+    const caller = await callerAs(await createMember(org.id));
+    const result = await caller.voices.getAll({ query });
+    return result.system.map((v) => v.name);
+  }
+
+  it("matches part of a name, ignoring case", async () => {
+    expect(await search("narr")).toEqual(["Narrator"]);
+  });
+
+  it("matches the description too", async () => {
+    expect(await search("warm")).toEqual(["Narrator"]);
+  });
+
+  it("treats % as a literal character, not as a wildcard that matches everything", async () => {
+    expect(await search("%")).toEqual(["100% Real"]);
+  });
+
+  it("treats _ as a literal character, not as any single character", async () => {
+    expect(await search("e_c")).toEqual(["snake_case"]);
+  });
+});
