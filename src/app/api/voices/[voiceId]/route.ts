@@ -2,8 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db";
 import { voice } from "@/db/schema";
 import { getOrgSession } from "@/lib/org-membership";
-import { getSignedAudioUrl } from "@/lib/r2";
-import { audioResponseHeaders } from "@/lib/audio-content-type";
+import { storedAudioResponse } from "@/lib/stored-audio-response";
 
 export async function GET(request: Request, { params }: RouteContext<"/api/voices/[voiceId]">) {
   const orgSession = await getOrgSession(request.headers);
@@ -36,17 +35,9 @@ export async function GET(request: Request, { params }: RouteContext<"/api/voice
     return new Response("Voice audio is not available yet", { status: 409 });
   }
 
-  const signedUrl = await getSignedAudioUrl(voiceRecord.r2ObjectKey);
-  const audioResponse = await fetch(signedUrl);
-
-  if (!audioResponse.ok) {
-    return new Response("Failed to fetch voice audio", { status: 502 });
-  }
-
-  return new Response(audioResponse.body, {
-    headers: audioResponseHeaders(
-      audioResponse.headers.get("content-type"),
-      voiceRecord.variant === "SYSTEM" ? "public, max-age=86400" : "private, max-age=3600",
-    ),
-  });
+  return storedAudioResponse(
+    request,
+    voiceRecord.r2ObjectKey,
+    voiceRecord.variant === "SYSTEM" ? "public, max-age=86400" : "private, max-age=3600",
+  );
 }
