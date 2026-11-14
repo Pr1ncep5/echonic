@@ -3,10 +3,11 @@ import {
   PutObjectCommand,
   GetObjectCommand,
   DeleteObjectCommand,
+  DeleteObjectsCommand,
+  ListObjectsV2Command,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-import { Data, Effect, Exit, type Scope } from "effect";
-import * as Sentry from "@sentry/nextjs";
+import { Data, Effect } from "effect";
 import { env } from "./env";
 
 /**
@@ -32,54 +33,28 @@ type UploadAudioOptions = {
   contentType?: string;
 };
 
-export async function uploadAudio({
+/**
+ * Uploads audio. Callers queue a delayed cleanup for the key before calling this and cancel
+ * it in the transaction that inserts the owning row, so a failed or interrupted request
+ * never leaves an orphaned object (see outbox-service.ts).
+ */
+export function uploadAudio({
   buffer,
   key,
   contentType = "audio/wav",
-}: UploadAudioOptions): Promise<void> {
-  await r2.send(
-    new PutObjectCommand({
-      Bucket: env.R2_BUCKET_NAME,
-      Key: key,
-      Body: buffer,
-      ContentType: contentType,
-    }),
-  );
-}
-
-/**
- * Uploads audio as a saga step: if the enclosing scope fails, the object is deleted again.
- * The delete is skipped when `isReferenced` finds a row pointing at the key, because a
- * failed insert may still have committed (e.g. a timeout after commit). Failed rollbacks
- * are logged with the key so orphaned objects can be found later.
- */
-export function uploadAudioWithRollback(
-  options: UploadAudioOptions & { readonly isReferenced: () => Promise<boolean> },
-): Effect.Effect<void, StorageUploadError, Scope.Scope> {
-  const { isReferenced, ...upload } = options;
-  return Effect.acquireRelease(
-    Effect.tryPromise({
-      try: () => uploadAudio(upload),
-      catch: (cause) => new StorageUploadError({ key: upload.key, cause }),
-    }),
-    (_, exit) =>
-      Exit.isFailure(exit)
-        ? Effect.tryPromise(async () => {
-            if (!(await isReferenced())) {
-              await deleteAudio(upload.key);
-            }
-          }).pipe(
-            Effect.catch((error) =>
-              Effect.sync(() =>
-                Sentry.logger.error("Failed to roll back uploaded audio", {
-                  key: upload.key,
-                  error,
-                }),
-              ),
-            ),
-          )
-        : Effect.void,
-  );
+}: UploadAudioOptions): Effect.Effect<void, StorageUploadError> {
+  return Effect.tryPromise({
+    try: () =>
+      r2.send(
+        new PutObjectCommand({
+          Bucket: env.R2_BUCKET_NAME,
+          Key: key,
+          Body: buffer,
+          ContentType: contentType,
+        }),
+      ),
+    catch: (cause) => new StorageUploadError({ key, cause }),
+  }).pipe(Effect.asVoid);
 }
 
 export async function deleteAudio(key: string): Promise<void> {
@@ -89,6 +64,33 @@ export async function deleteAudio(key: string): Promise<void> {
       Key: key,
     }),
   );
+}
+
+/** Deletes every object under a prefix, e.g. all audio of a deleted Organization. */
+export async function deleteAudioByPrefix(prefix: string): Promise<void> {
+  let continuationToken: string | undefined;
+  do {
+    const page = await r2.send(
+      new ListObjectsV2Command({
+        Bucket: env.R2_BUCKET_NAME,
+        Prefix: prefix,
+        ContinuationToken: continuationToken,
+      }),
+    );
+    const keys = (page.Contents ?? []).flatMap((object) => (object.Key ? [object.Key] : []));
+    if (keys.length > 0) {
+      const result = await r2.send(
+        new DeleteObjectsCommand({
+          Bucket: env.R2_BUCKET_NAME,
+          Delete: { Objects: keys.map((Key) => ({ Key })), Quiet: true },
+        }),
+      );
+      if (result.Errors?.length) {
+        throw new Error(`Failed to delete ${result.Errors.length} objects under ${prefix}`);
+      }
+    }
+    continuationToken = page.IsTruncated ? page.NextContinuationToken : undefined;
+  } while (continuationToken);
 }
 
 export async function getSignedAudioUrl(key: string): Promise<string> {
