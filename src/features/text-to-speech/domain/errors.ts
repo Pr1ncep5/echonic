@@ -1,5 +1,6 @@
 import { Data } from "effect";
 import { TRPCError } from "@trpc/server";
+import { appError } from "@/trpc/app-error";
 import type {
   BillingServiceError,
   SubscriptionRequiredError,
@@ -39,11 +40,27 @@ export class TtsTimeoutError extends Data.TaggedError("TtsTimeout")<{
 }> {}
 
 /**
+ * Thrown when an Organization has started too many Generations in the last minute.
+ */
+export class GenerationRateLimitedError extends Data.TaggedError("GenerationRateLimited")<{
+  readonly orgId: string;
+  readonly limitPerMinute: number;
+}> {}
+
+/**
+ * Thrown when the Generation does not exist or belongs to another Organization.
+ */
+export class GenerationNotFoundError extends Data.TaggedError("GenerationNotFound")<{
+  readonly generationId: string;
+}> {}
+
+/**
  * Union of all domain errors that can occur during audio generation.
  */
 export type GenerationError =
   | SubscriptionRequiredError
   | BillingServiceError
+  | GenerationRateLimitedError
   | VoiceNotFoundError
   | VoiceAudioUnavailableError
   | TtsInferenceError
@@ -51,17 +68,49 @@ export type GenerationError =
   | StorageUploadError
   | DatabaseError;
 
+export type DeleteGenerationError = GenerationNotFoundError | DatabaseError;
+
 /**
- * Exhaustively maps any GenerationError into the appropriate TRPCError.
+ * True for failures that point at our infrastructure rather than at the caller, so only
+ * these are worth reporting to Sentry.
+ */
+export function isInfrastructureError(error: GenerationError | DeleteGenerationError): boolean {
+  // oxlint-disable-next-line eslint/no-underscore-dangle
+  switch (error._tag) {
+    case "BillingService":
+    case "TtsInference":
+    case "TtsTimeout":
+    case "StorageUpload":
+    case "Database":
+      return true;
+    case "SubscriptionRequired":
+    case "GenerationRateLimited":
+    case "GenerationNotFound":
+    case "VoiceNotFound":
+    case "VoiceAudioUnavailable":
+      return false;
+  }
+}
+
+/**
+ * Exhaustively maps any generation error into the appropriate TRPCError.
  * TypeScript guarantees at compile time that all tagged errors are handled.
  */
-export function toTRPCError(error: GenerationError): TRPCError {
+export function toTRPCError(error: GenerationError | DeleteGenerationError): TRPCError {
   // oxlint-disable-next-line eslint/no-underscore-dangle
   switch (error._tag) {
     case "SubscriptionRequired":
+      return appError("SUBSCRIPTION_REQUIRED", "FORBIDDEN", "Subscription required");
+    case "GenerationRateLimited":
+      return appError(
+        "RATE_LIMITED",
+        "TOO_MANY_REQUESTS",
+        `Your organization can start ${error.limitPerMinute} generations per minute. Try again shortly.`,
+      );
+    case "GenerationNotFound":
       return new TRPCError({
-        code: "FORBIDDEN",
-        message: "SUBSCRIPTION_REQUIRED",
+        code: "NOT_FOUND",
+        message: "Generation not found",
       });
     case "VoiceNotFound":
       return new TRPCError({
@@ -76,12 +125,12 @@ export function toTRPCError(error: GenerationError): TRPCError {
     case "TtsTimeout":
       return new TRPCError({
         code: "TIMEOUT",
-        message: `TTS inference timed out after ${error.timeoutMs}ms`,
+        message: "Generating speech took too long. Please try again.",
       });
     case "TtsInference":
       return new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: error.reason,
+        message: "Speech generation failed. Please try again.",
       });
     case "StorageUpload":
       return new TRPCError({
@@ -96,7 +145,7 @@ export function toTRPCError(error: GenerationError): TRPCError {
     case "Database":
       return new TRPCError({
         code: "INTERNAL_SERVER_ERROR",
-        message: "Database transaction failed",
+        message: "Something went wrong on our side. Please try again.",
       });
   }
 }
