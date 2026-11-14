@@ -28,6 +28,9 @@ export const env = createEnv({
     POLAR_ACCESS_TOKEN: z.string().min(32),
     POLAR_SERVER: z.enum(["sandbox", "production"]).default("sandbox"),
     POLAR_PRODUCT_ID: z.string().min(1),
+    // Only for end-to-end tests, which point this at a local fake. Leave unset otherwise:
+    // POLAR_SERVER chooses between Polar's sandbox and production.
+    POLAR_API_URL: z.url().optional(),
 
     CRON_SECRET: z.string().min(32).optional(),
 
