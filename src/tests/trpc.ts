@@ -1,6 +1,6 @@
 import { createCallerFactory, createTRPCContext } from "@/trpc/init";
 import { appRouter } from "@/trpc/routers/_app";
-import { signInAs, type TestSession } from "./session";
+import { signInAs, signOut, type TestSession } from "./session";
 
 const createCaller = createCallerFactory(appRouter);
 
@@ -14,5 +14,6 @@ export async function callerAs(testSession: TestSession) {
 }
 
 export async function signedOutCaller() {
+  signOut();
   return createCaller(await createTRPCContext({ headers: new Headers() }));
 }
