@@ -1,16 +1,18 @@
 "use client";
 
+import { useRef } from "react";
 import { z } from "zod";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
 import { formOptions } from "@tanstack/react-form";
 
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 
 import { useAppForm } from "@/hooks/use-app-form";
 import { useCheckout } from "@/features/billing/hooks/use-checkout";
 import { TEXT_MAX_LENGTH } from "../data/constants";
 import { useTRPC } from "@/trpc/client";
+import { getAppErrorCode } from "@/trpc/client-error";
 
 const ttsFormSchema = z.object({
   text: z
@@ -48,7 +50,14 @@ export function TextToSpeechForm({
 }) {
   const trpc = useTRPC();
   const router = useRouter();
+  const queryClient = useQueryClient();
   const createMutation = useMutation(trpc.generations.create.mutationOptions({}));
+
+  // One key per attempt to generate. It is kept when a submit fails, so retrying after a
+  // dropped connection returns the Generation that was already made instead of a second,
+  // billed one. It changes after a success, so generating the same text again on purpose
+  // gives a new take.
+  const idempotencyKey = useRef<string | null>(null);
 
   const { checkout } = useCheckout();
 
@@ -60,8 +69,10 @@ export function TextToSpeechForm({
     },
 
     onSubmit: async ({ value }) => {
+      idempotencyKey.current ??= crypto.randomUUID();
       try {
         const data = await createMutation.mutateAsync({
+          idempotencyKey: idempotencyKey.current,
           text: value.text.trim(),
           voiceId: value.voiceId,
           temperature: value.temperature,
@@ -70,20 +81,20 @@ export function TextToSpeechForm({
           repetitionPenalty: value.repetitionPenalty,
         });
 
-        toast.success("Audio generated successfully!");
+        idempotencyKey.current = null;
+        void queryClient.invalidateQueries(trpc.generations.list.pathFilter());
         router.push(`/text-to-speech/${data.id}`);
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Failed to generate audio";
-
-        if (message === "SUBSCRIPTION_REQUIRED") {
+        if (getAppErrorCode(error) === "SUBSCRIPTION_REQUIRED") {
           toast.error("Subscription required", {
+            description: "Your organization needs a subscription to generate speech.",
             action: {
               label: "Subscribe",
               onClick: () => checkout(),
             },
           });
         } else {
-          toast.error(message);
+          toast.error(error instanceof Error ? error.message : "Failed to generate audio");
         }
       }
     },
