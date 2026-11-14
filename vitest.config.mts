@@ -55,5 +55,9 @@ export default defineConfig({
     // Every test file shares one database and empties it before each test, so files
     // must not run at the same time.
     fileParallelism: false,
+    // Load the app's modules once instead of once per test file (the run is about three
+    // times faster). The price: a `vi.mock` in one test file stays in force for the files
+    // that run after it, so keep mocks in src/tests/setup.ts where every file shares them.
+    isolate: false,
   },
 });

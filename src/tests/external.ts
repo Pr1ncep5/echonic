@@ -1,9 +1,15 @@
+import { Effect } from "effect";
 import { vi } from "vitest";
 
+import type * as r2 from "@/lib/r2";
+
 /**
- * Stand-ins for the services outside our system: Polar and Chatterbox. setup.ts puts them
- * in place of the real clients for every test. A test describes the outside world with the
- * `given…` functions and can assert on what was sent with the exported spies.
+ * Stand-ins for the services outside our system: Polar, Chatterbox and R2. setup.ts puts
+ * them in place of the real clients for every test. A test describes the outside world with
+ * the `given…` functions and can assert on what was sent with the exported spies.
+ *
+ * They are created once, here, and never inside a `vi.mock` factory: the app's modules are
+ * loaded once for the whole run, so every test file must share the same objects.
  */
 
 type SubscriptionState = "active" | "none" | "outage";
@@ -68,3 +74,11 @@ export const chatterboxPost = vi.fn<(path: string, init: unknown) => Promise<unk
 );
 
 export const fakeChatterbox = { POST: chatterboxPost };
+
+/** Replaces the functions of `@/lib/r2`; tests reach them with `vi.mocked(uploadAudio)`. */
+export const fakeR2 = {
+  uploadAudio: vi.fn<typeof r2.uploadAudio>(() => Effect.void),
+  deleteAudio: vi.fn<typeof r2.deleteAudio>(async () => {}),
+  deleteAudioByPrefix: vi.fn<typeof r2.deleteAudioByPrefix>(async () => {}),
+  getSignedAudioUrl: vi.fn<typeof r2.getSignedAudioUrl>(async (key) => `https://r2.invalid/${key}`),
+};

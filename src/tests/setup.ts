@@ -25,20 +25,11 @@ vi.mock("next/server", async (importOriginal) => {
   return { ...original, after: vi.fn<typeof original.after>() };
 });
 
-// External services: no test may reach the network. R2 is configured per test with
-// vi.mocked(); Polar and Chatterbox with the functions in ./external.
+// External services: no test may reach the network. The stand-ins live in ./external
+// and are only imported here, never created here (see the note in that file).
 vi.mock("@/lib/r2", async (importOriginal) => {
-  const { Effect } = await import("effect");
-  const original = await importOriginal<typeof import("@/lib/r2")>();
-  return {
-    ...original,
-    uploadAudio: vi.fn<typeof original.uploadAudio>(() => Effect.void),
-    deleteAudio: vi.fn<typeof original.deleteAudio>(async () => {}),
-    deleteAudioByPrefix: vi.fn<typeof original.deleteAudioByPrefix>(async () => {}),
-    getSignedAudioUrl: vi.fn<typeof original.getSignedAudioUrl>(
-      async (key) => `https://r2.invalid/${key}`,
-    ),
-  };
+  const { fakeR2 } = await import("./external");
+  return { ...(await importOriginal<typeof import("@/lib/r2")>()), ...fakeR2 };
 });
 
 vi.mock("@/lib/polar", async (importOriginal) => {
