@@ -1,11 +1,11 @@
 import { z } from "zod";
-import { TRPCError } from "@trpc/server";
-import * as Sentry from "@sentry/nextjs";
 import { db } from "@/db";
 import { voice } from "@/db/schema";
 import { eq, and, or, ilike, desc, asc } from "drizzle-orm";
-import { deleteAudio } from "@/lib/r2";
-import { createTRPCRouter, orgProcedure } from "../init";
+import { deleteVoiceErrorToTRPCError } from "@/features/voices/domain/errors";
+import { deleteVoiceWorkflow } from "@/features/voices/workflows/delete-voice-workflow";
+import { createTRPCRouter, orgAdminProcedure, orgProcedure } from "../init";
+import { runEffect } from "../run-effect";
 
 /**
  * Escapes special characters used in SQL LIKE/ILIKE patterns.
@@ -26,7 +26,7 @@ export const voicesRouter = createTRPCRouter({
     .input(
       z
         .object({
-          query: z.string().trim().optional(),
+          query: z.string().trim().max(100).optional(),
         })
         .optional(),
     )
@@ -71,45 +71,13 @@ export const voicesRouter = createTRPCRouter({
       return { custom, system };
     }),
 
-  delete: orgProcedure.input(z.object({ id: z.string() })).mutation(async ({ ctx, input }) => {
-    // 1. Validate ownership before deleting
-    const [existingVoice] = await db
-      .select({ id: voice.id, r2ObjectKey: voice.r2ObjectKey })
-      .from(voice)
-      .where(
-        and(
-          eq(voice.id, input.id),
-          eq(voice.variant, "CUSTOM"),
-          eq(voice.orgId, ctx.orgId), // <-- Ensures strict ownership execution
-        ),
-      )
-      .limit(1);
-
-    if (!existingVoice) {
-      throw new TRPCError({
-        code: "NOT_FOUND",
-        message: "Voice not found",
-      });
-    }
-
-    // 2. Clear from database
-    await db.delete(voice).where(eq(voice.id, existingVoice.id));
-
-    // 3. Delete from bucket
-    if (existingVoice.r2ObjectKey) {
-      // TODO: In production, consider background jobs, retries, cron jobs etc.
-      // Currently, if this command fails (network drop), the file is orphaned.
-      // The user's delete still succeeds, so the failure is logged to find orphans later.
-      await deleteAudio(existingVoice.r2ObjectKey).catch((error: unknown) => {
-        Sentry.logger.error("Failed to delete voice audio from R2; object is orphaned", {
-          orgId: ctx.orgId,
-          voiceId: existingVoice.id,
-          r2ObjectKey: existingVoice.r2ObjectKey,
-          error,
-        });
-      });
-    }
-
-    return { success: true };
-  }),
+  // Owners and admins only: every Member's work may depend on a Custom voice.
+  delete: orgAdminProcedure.input(z.object({ id: z.string() })).mutation(({ ctx, input }) =>
+    runEffect(deleteVoiceWorkflow(input, { orgId: ctx.orgId }), {
+      toTRPCError: deleteVoiceErrorToTRPCError,
+      // oxlint-disable-next-line eslint/no-underscore-dangle
+      shouldReport: (error) => error._tag === "Database",
+      tags: { orgId: ctx.orgId },
+    }),
+  ),
 });
