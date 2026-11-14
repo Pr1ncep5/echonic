@@ -4,6 +4,7 @@ import { beforeEach, vi } from "vitest";
 import { db } from "@/db";
 import { organization, outbox, rateLimit, user, verification, voice } from "@/db/schema";
 import { env } from "@/lib/env";
+import { resetExternal } from "./external";
 import { signOut } from "./session";
 
 // Tests empty every table. Refuse to run against anything but the throwaway database.
@@ -24,8 +25,8 @@ vi.mock("next/server", async (importOriginal) => {
   return { ...original, after: vi.fn<typeof original.after>() };
 });
 
-// External services: no test may reach the network. Tests that care about a call
-// configure these mocks with vi.mocked().
+// External services: no test may reach the network. R2 is configured per test with
+// vi.mocked(); Polar and Chatterbox with the functions in ./external.
 vi.mock("@/lib/r2", async (importOriginal) => {
   const { Effect } = await import("effect");
   const original = await importOriginal<typeof import("@/lib/r2")>();
@@ -41,21 +42,18 @@ vi.mock("@/lib/r2", async (importOriginal) => {
 });
 
 vi.mock("@/lib/polar", async (importOriginal) => {
-  const original = await importOriginal<typeof import("@/lib/polar")>();
-  return {
-    ...original,
-    polar: {
-      customers: {
-        getStateExternal: vi.fn<typeof original.polar.customers.getStateExternal>(),
-      },
-      subscriptions: { revoke: vi.fn<typeof original.polar.subscriptions.revoke>() },
-      events: { ingest: vi.fn<typeof original.polar.events.ingest>() },
-    },
-  };
+  const { fakePolar } = await import("./external");
+  return { ...(await importOriginal<typeof import("@/lib/polar")>()), polar: fakePolar };
+});
+
+vi.mock("@/lib/chatterbox-client", async () => {
+  const { fakeChatterbox } = await import("./external");
+  return { chatterbox: fakeChatterbox };
 });
 
 beforeEach(async () => {
   signOut();
+  resetExternal();
   // Forgets recorded calls but keeps the default behaviour given to the mocks above.
   vi.clearAllMocks();
   // CASCADE reaches every table that references these, which is all the others.
