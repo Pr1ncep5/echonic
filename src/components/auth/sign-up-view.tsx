@@ -16,8 +16,9 @@ import {
 } from "@/components/ui/field";
 import { authClient, signInWithGitHub, signInWithGoogle } from "@/lib/auth-client";
 import { toast } from "sonner";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
+import { AuthShell } from "@/components/auth/auth-shell";
 import { Spinner } from "@/components/ui/spinner";
 
 const signupSchema = z
@@ -33,7 +34,9 @@ const signupSchema = z
   });
 
 export function SignUpView({ className, ...props }: React.ComponentPropsWithoutRef<typeof Card>) {
-  const router = useRouter();
+  // Set once the account exists: signing in needs a verified email, so the next step
+  // happens in the user's inbox, not here.
+  const [sentTo, setSentTo] = useState<string | null>(null);
 
   const form = useForm({
     defaultValues: { name: "", email: "", password: "", confirmPassword: "" },
@@ -43,16 +46,39 @@ export function SignUpView({ className, ...props }: React.ComponentPropsWithoutR
         email: value.email,
         password: value.password,
         name: value.name,
+        callbackURL: "/",
       });
 
       if (error) {
         return toast.error(error.message || "Failed to create account");
       }
 
-      toast.success("Account created!");
-      router.push("/");
+      setSentTo(value.email);
     },
   });
+
+  if (sentTo) {
+    return (
+      <AuthShell
+        title="Check your email"
+        description={
+          <>
+            We sent a verification link to <span className="text-foreground">{sentTo}</span>.
+          </>
+        }
+        footer={
+          <Link href="/auth/sign-in" className="font-medium text-foreground underline">
+            Back to sign in
+          </Link>
+        }
+      >
+        <p className="text-sm text-muted-foreground">
+          Open the link to finish creating your account. It signs you in automatically. If nothing
+          arrives, check your spam folder, or sign in to get a new link.
+        </p>
+      </AuthShell>
+    );
+  }
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-muted/40 p-4">
@@ -162,14 +188,6 @@ export function SignUpView({ className, ...props }: React.ComponentPropsWithoutR
                 <FieldSeparator className="mt-4 mb-2">Or continue with</FieldSeparator>
 
                 <div className="flex flex-col gap-3">
-                  {/* TODO: Can add Magic-Link later */}
-                  {/* <Button variant="outline" asChild className="w-full">
-                    <Link href="/auth/magic-link">
-                      <MailIcon className="mr-2 size-4" />
-                      Continue with Magic Link
-                    </Link>
-                  </Button> */}
-
                   <Button
                     variant="outline"
                     type="button"

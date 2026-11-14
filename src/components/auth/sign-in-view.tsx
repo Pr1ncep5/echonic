@@ -39,6 +39,12 @@ export function SignInView({ className, ...props }: React.ComponentPropsWithoutR
         password: value.password,
       });
       if (error) {
+        // Better Auth has just sent a fresh verification link (sendOnSignIn).
+        if (error.code === "EMAIL_NOT_VERIFIED") {
+          return toast.error("Verify your email first", {
+            description: "We sent a new verification link to your inbox.",
+          });
+        }
         return toast.error(error.message || "Failed to sign in");
       }
       // twoFactorClient is already navigating to /auth/two-factor.
