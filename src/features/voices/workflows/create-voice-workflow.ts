@@ -5,15 +5,25 @@ import { createId } from "@paralleldrive/cuid2";
 import { parseBuffer } from "music-metadata";
 
 import { db } from "@/db";
-import { voice } from "@/db/schema";
+import { outbox, voice } from "@/db/schema";
 import { DatabaseError } from "@/db/errors";
-import { uploadAudioWithRollback } from "@/lib/r2";
+import { uploadAudio } from "@/lib/r2";
 import { isAudioContentType } from "@/lib/audio-content-type";
 import {
-  scheduleUsageEvent,
+  usageEventTask,
   verifySubscription,
 } from "@/features/billing/services/subscription-service";
-import { MAX_UPLOAD_SIZE_BYTES, MIN_AUDIO_DURATION_SECONDS } from "../data/upload-limits";
+import {
+  outboxValues,
+  queueUploadCleanup,
+  scheduleOutboxTasks,
+} from "@/features/outbox/services/outbox-service";
+import {
+  MAX_UPLOAD_SIZE_BYTES,
+  MIN_AUDIO_DURATION_SECONDS,
+  VOICE_DESCRIPTION_MAX_LENGTH,
+  VOICE_NAME_MAX_LENGTH,
+} from "../data/upload-limits";
 import { VOICE_CATEGORIES } from "../data/voice-categories";
 import {
   AudioDurationUnknownError,
@@ -23,16 +33,22 @@ import {
   AudioTooLargeError,
   AudioTooShortError,
   AudioUnsupportedTypeError,
+  ConsentMissingError,
   ContentTypeMissingError,
   InvalidVoiceInputError,
   type CreateVoiceError,
 } from "../domain/errors";
 
 const createVoiceSchema = z.object({
-  name: z.string().min(1, "Voice name is required"),
+  name: z.string().trim().min(1, "Voice name is required").max(VOICE_NAME_MAX_LENGTH),
   category: z.enum(VOICE_CATEGORIES),
-  language: z.string().min(1, "Language is required"),
-  description: z.string().nullish(),
+  // A BCP 47 tag such as "en-US"; the UI turns its region into a flag.
+  language: z
+    .string()
+    .max(35)
+    .regex(/^[a-z]{2,3}(-[A-Za-z0-9]{2,8})*$/, "Language is invalid"),
+  description: z.string().trim().max(VOICE_DESCRIPTION_MAX_LENGTH).nullish(),
+  consent: z.string().nullish(),
 });
 
 /**
@@ -47,6 +63,8 @@ export interface CreateVoiceInput {
 
 export interface CreateVoiceContext {
   readonly orgId: string;
+  /** The Member creating the voice; recorded as the one who gave consent. */
+  readonly userId: string;
 }
 
 type ReadResult =
@@ -124,18 +142,17 @@ function validateDuration(
 }
 
 /**
- * Orchestrates Custom voice creation: subscription check, input and audio validation,
- * R2 upload, DB insert, then usage metering.
+ * Orchestrates Custom voice creation: subscription check, input, consent and audio
+ * validation, R2 upload, DB insert, then usage metering.
  *
- * The id and R2 key are known up front, so the audio is uploaded first and the row is
- * inserted once with its key. A row therefore never exists without audio, and the only
- * compensation needed is deleting the R2 object if the insert fails.
+ * As in generate-workflow.ts, a delayed cleanup task is queued before the upload, and one
+ * transaction inserts the voice, cancels that cleanup and queues the Usage event.
  */
 export function createVoiceWorkflow(
   input: CreateVoiceInput,
   ctx: CreateVoiceContext,
 ): Effect.Effect<{ id: string; name: string }, CreateVoiceError> {
-  const workflow = Effect.gen(function* () {
+  return Effect.gen(function* () {
     yield* verifySubscription(ctx.orgId);
 
     const parsed = createVoiceSchema.safeParse(input.params);
@@ -143,6 +160,9 @@ export function createVoiceWorkflow(
       return yield* Effect.fail(new InvalidVoiceInputError({ issues: parsed.error.issues }));
     }
     const params = parsed.data;
+    if (params.consent !== "true") {
+      return yield* Effect.fail(new ConsentMissingError());
+    }
 
     if (input.contentTypeHeader === null) {
       return yield* Effect.fail(new ContentTypeMissingError());
@@ -160,40 +180,35 @@ export function createVoiceWorkflow(
     const id = createId();
     const r2ObjectKey = `voices/orgs/${ctx.orgId}/${id}`;
 
-    yield* uploadAudioWithRollback({
-      buffer,
-      key: r2ObjectKey,
-      contentType,
-      isReferenced: async () => {
-        const [existing] = await db
-          .select({ id: voice.id })
-          .from(voice)
-          .where(eq(voice.id, id))
-          .limit(1);
-        return existing !== undefined;
-      },
-    });
+    const cleanupTaskId = yield* queueUploadCleanup(r2ObjectKey);
+    yield* uploadAudio({ buffer, key: r2ObjectKey, contentType });
 
+    const usageTask = outboxValues(
+      usageEventTask(ctx.orgId, { name: "voice_creation", externalId: id }),
+    );
     yield* Effect.tryPromise({
       try: () =>
-        db.insert(voice).values({
-          id,
-          name: params.name,
-          variant: "CUSTOM",
-          orgId: ctx.orgId,
-          description: params.description,
-          category: params.category,
-          language: params.language,
-          r2ObjectKey,
+        db.transaction(async (tx) => {
+          await tx.insert(voice).values({
+            id,
+            name: params.name,
+            variant: "CUSTOM",
+            orgId: ctx.orgId,
+            description: params.description,
+            category: params.category,
+            language: params.language,
+            r2ObjectKey,
+            consentedAt: new Date(),
+            consentedByUserId: ctx.userId,
+          });
+          await tx.delete(outbox).where(eq(outbox.id, cleanupTaskId));
+          await tx.insert(outbox).values(usageTask);
         }),
       catch: (cause) => new DatabaseError({ operation: "insert", entity: "voice", cause }),
     });
 
-    yield* scheduleUsageEvent(ctx.orgId, { name: "voice_creation", externalId: id });
+    yield* scheduleOutboxTasks([usageTask.id]);
 
     return { id, name: params.name };
   });
-
-  // Effect.scoped binds the upload's rollback finalizer to this execution
-  return Effect.scoped(workflow);
 }
