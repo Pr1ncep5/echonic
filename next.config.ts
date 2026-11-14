@@ -7,6 +7,24 @@ const nextConfig: NextConfig = {
   experimental: {
     proxyClientMaxBodySize: "20mb",
   },
+  headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          { key: "X-Content-Type-Options", value: "nosniff" },
+          { key: "X-Frame-Options", value: "DENY" },
+          { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+          { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains" },
+          // The microphone is needed to record a voice sample; nothing else is used.
+          {
+            key: "Permissions-Policy",
+            value: "camera=(), geolocation=(), payment=(), microphone=(self)",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default withSentryConfig(nextConfig, {

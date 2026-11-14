@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionCookie } from "better-auth/cookies";
 
-const publicRoutes = ["/auth", "/api/auth"];
+// /monitoring is the Sentry tunnel: browser errors on the sign-in pages must get through.
+// /api/cron authenticates with its own bearer token.
+const publicRoutes = ["/auth", "/api/auth", "/api/cron", "/monitoring"];
 
 const isMatch = (pathname: string, routes: string[]) => {
-  return routes.some((route) => pathname.startsWith(route));
+  return routes.some((route) => pathname === route || pathname.startsWith(`${route}/`));
 };
 
 export async function proxy(request: NextRequest) {
