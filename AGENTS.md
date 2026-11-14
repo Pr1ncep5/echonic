@@ -18,7 +18,19 @@ IMPORTANT: Bun only. Never use npm, npx, yarn or pnpm. Use `bunx` for one-off to
 - `bun run db:seed` — seed system voices; `bunx drizzle-kit push` — apply schema
 - `bun run sync-api` — regenerate the Chatterbox API types
 
-There is no test runner yet. Verify with `bun run check` and by running the app. Do not add test files or frameworks unprompted.
+- `bun run test:db` — start the test database (Docker, port 5433); `bun run test:db:stop` to remove it
+- `bun run test` — run the tests once; `bun run test:watch` while working
+
+## Tests
+
+Vitest, against a real Postgres. Run `bun run test` together with `bun run check` before finishing a change to server code.
+
+- A test file sits next to what it tests: `voices.ts` → `voices.test.ts`. Shared helpers live in `src/tests/`.
+- Test through the public entry point: the tRPC caller (`callerAs` in `src/tests/trpc.ts`) or the Route Handler's exported function. Sign in with `signInAs`, create rows with `src/tests/factories.ts`.
+- The database is real and emptied before each test. Never mock `@/db`.
+- Only what leaves our system is replaced, in `src/tests/setup.ts`: the Better Auth session, R2, Polar and Next's `after`. Add a new external service there, not in individual tests.
+- A new rule under "Domain rules" comes with a test named after the rule. Assert on what the caller sees and on the rows left behind, not on which functions were called.
+- No tests for components or for `src/components/ui`.
 
 Lint is oxlint, format is oxfmt. Do not hand-format or argue with them.
 

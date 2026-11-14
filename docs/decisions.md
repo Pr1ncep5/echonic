@@ -2,6 +2,15 @@
 
 Smaller decisions and the reasons for them, newest first. Hard-to-reverse decisions get an ADR in `docs/adr/` and are only linked here.
 
+## 2026-11-14: tests
+
+- **Vitest for unit and integration tests, Playwright for end-to-end.** The aim is a test for every domain rule in `AGENTS.md`, not a coverage figure. Components are not tested on their own; the end-to-end journeys cover the interface that matters.
+- **Integration tests use a real Postgres, never a mocked database.** The rules worth testing are enforced by queries, constraints and transactions (Organization filters, the idempotency index, a Generation committing together with its Usage event), which a mock would not exercise. The database runs in Docker on port 5433, keeps its data in memory, and is rebuilt from the schema at the start of every run.
+- **Only external services are replaced:** the Better Auth session, R2, Polar and Next's `after`. Tests call the real tRPC procedures and Route Handlers, so the guards and filters run as they do in the app.
+- **Test files run one at a time.** They share one database that is emptied before each test. Revisit with a database per worker if the suite gets slow.
+- **End-to-end tests will use a real R2 test bucket, and a local fake server for Chatterbox and Polar.** R2 is reliable enough and needs no code change; Chatterbox costs GPU time and Polar holds the Subscription state, so both are faked. The cost is that the end-to-end job needs secrets and cannot run for pull requests from forks.
+- **A retried submit with the same idempotency key returns the first Generation even if the text differs.** The client only reuses a key for an identical resubmit, so this is not rejected.
+
 ## 2026-11-14: project review
 
 ### Reliability and billing
