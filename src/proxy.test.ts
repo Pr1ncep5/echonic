@@ -1,11 +1,12 @@
 import { NextRequest } from "next/server";
 import { describe, expect, it } from "vitest";
 
+import { env } from "@/lib/env";
 import { proxy } from "./proxy";
 
 function visit(path: string, cookie?: string) {
   return proxy(
-    new NextRequest(`http://localhost:3000${path}`, { headers: cookie ? { cookie } : undefined }),
+    new NextRequest(new URL(path, env.APP_URL), { headers: cookie ? { cookie } : undefined }),
   );
 }
 

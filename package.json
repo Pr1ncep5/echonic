@@ -16,6 +16,7 @@
     "test:watch": "vitest",
     "test:db": "docker compose -f compose.test.yaml up -d --wait",
     "test:db:stop": "docker compose -f compose.test.yaml down",
+    "e2e": "playwright test",
     "db:seed": "bun run scripts/seed-system-voices.ts",
     "sync-api": "bun run scripts/sync-api.ts",
     "clean": "rm -rf .next node_modules && bun install",
@@ -87,6 +88,7 @@
     "zod": "^4.6.5"
   },
   "devDependencies": {
+    "@playwright/test": "^1.65.1",
     "@tailwindcss/postcss": "^4.3.3",
     "@types/bun": "^1.4.2",
     "@types/node": "^26.6.5",

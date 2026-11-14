@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { db } from "@/db";
 import { voice } from "@/db/schema";
+import { env } from "@/lib/env";
 import { StorageUploadError, uploadAudio } from "@/lib/r2";
 import { wavOfSeconds } from "@/tests/audio";
 import { givenPolarOutage, givenSubscription } from "@/tests/external";
@@ -27,7 +28,7 @@ function cloneVoice({
   contentType?: string;
   audio?: Buffer;
 } = {}) {
-  const url = new URL("http://localhost:3000/api/voices/create");
+  const url = new URL("/api/voices/create", env.APP_URL);
   for (const [name, value] of Object.entries(params)) {
     url.searchParams.set(name, value);
   }
