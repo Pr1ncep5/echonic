@@ -4,10 +4,14 @@ import { APIError } from "better-auth/api";
 import { and, eq } from "drizzle-orm";
 import { Effect } from "effect";
 import { db } from "@/db/index";
-import { magicLink, organization, twoFactor } from "better-auth/plugins";
+import { magicLink } from "better-auth/plugins/magic-link";
+import { organization } from "better-auth/plugins/organization";
+import { twoFactor } from "better-auth/plugins/two-factor";
+import { nextCookies } from "better-auth/next-js";
 import { passkey } from "@better-auth/passkey";
 import { dash } from "@better-auth/infra";
 import * as schema from "@/db/schema";
+import { authAuditDatabaseHooks, authAuditHooks } from "@/features/account/services/auth-audit";
 import {
   deleteAccountEmail,
   invitationEmail,
@@ -30,7 +34,8 @@ export const auth = betterAuth({
     schema: { ...schema },
   }),
   rateLimit: {
-    enabled: true, // Development mode
+    // Better Auth only rate-limits in production by default; forced on so dev behaves the same.
+    enabled: true,
     storage: "database",
     modelName: "rateLimit",
     window: 60, // Default window: 1 minute
@@ -55,6 +60,9 @@ export const auth = betterAuth({
   },
   advanced: {
     ipAddress: {
+      // Vercel sets x-real-ip to the client IP and overwrites any value the client sends.
+      // Behind another proxy (e.g. Cloudflare) this must change, or rate limits share one bucket.
+      ipAddressHeaders: ["x-real-ip"],
       ipv6Subnet: 64, // Rate limit by /64 subnet instead of individual addresses into 1 rate limit bucket
     },
   },
@@ -92,6 +100,7 @@ export const auth = betterAuth({
     },
   },
   account: {
+    encryptOAuthTokens: true,
     accountLinking: {
       enabled: true,
       // Linking is only ever started by a signed-in user from Security settings,
@@ -110,6 +119,8 @@ export const auth = betterAuth({
       clientSecret: env.GOOGLE_CLIENT_SECRET,
     },
   },
+  hooks: authAuditHooks,
+  databaseHooks: authAuditDatabaseHooks,
   plugins: [
     magicLink({
       sendMagicLink: ({ email, url }) => sendEmailOrThrow(email, magicLinkEmail(url)),
@@ -123,6 +134,9 @@ export const auth = betterAuth({
     }),
     dash(),
     organization({
+      // Invitations match by email, so only a proven owner of the address may accept one.
+      // Better Auth's default depends on the ID scheme and would flip with a custom generateId.
+      requireEmailVerificationOnInvitation: true,
       sendInvitationEmail: ({ email, role, organization: org, inviter }) =>
         sendEmailOrThrow(
           email,
@@ -136,7 +150,6 @@ export const auth = betterAuth({
         ),
       // Better Auth only clears activeOrganizationId on the session of whoever removed the
       // member or deleted the organization, so clear it on every affected session here.
-      requireEmailVerificationOnInvitation: true,
       organizationHooks: {
         // Once the Organization is gone nobody can open its billing portal, so its
         // Subscription must end first. If Polar cannot be reached the deletion is refused
@@ -186,5 +199,7 @@ export const auth = betterAuth({
         },
       },
     }),
+    // Must stay last so cookies set by the other plugins reach server actions.
+    nextCookies(),
   ],
 });

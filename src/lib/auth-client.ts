@@ -2,7 +2,6 @@ import { createAuthClient } from "better-auth/react";
 import { magicLinkClient, organizationClient, twoFactorClient } from "better-auth/client/plugins";
 import { passkeyClient } from "@better-auth/passkey/client";
 import { sentinelClient } from "@better-auth/infra/client";
-import { nextCookies } from "better-auth/next-js";
 import { env } from "./env";
 
 export const authClient = createAuthClient({
@@ -18,7 +17,6 @@ export const authClient = createAuthClient({
     }),
     passkeyClient(),
     sentinelClient(),
-    nextCookies(),
   ],
 });
 

@@ -5,19 +5,19 @@ export const env = createEnv({
   server: {
     DATABASE_URL: z.string().min(1),
 
-    BETTER_AUTH_SECRET: z.string().min(1),
+    BETTER_AUTH_SECRET: z.string().min(32),
     BETTER_AUTH_URL: z.url(),
 
     GITHUB_CLIENT_ID: z.string().min(1),
-    GITHUB_CLIENT_SECRET: z.string().min(1),
+    GITHUB_CLIENT_SECRET: z.string().min(32),
     GOOGLE_CLIENT_ID: z.string().min(1),
-    GOOGLE_CLIENT_SECRET: z.string().min(1),
+    GOOGLE_CLIENT_SECRET: z.string().min(32),
 
     APP_URL: z.url(),
 
     R2_ACCOUNT_ID: z.string().min(1),
     R2_ACCESS_KEY_ID: z.string().min(1),
-    R2_SECRET_ACCESS_KEY: z.string().min(1),
+    R2_SECRET_ACCESS_KEY: z.string().min(32),
     R2_BUCKET_NAME: z.string().min(1),
 
     CHATTERBOX_API_KEY: z.string().min(1),
@@ -25,14 +25,14 @@ export const env = createEnv({
 
     SENTRY_DSN: z.url(),
 
-    POLAR_ACCESS_TOKEN: z.string().min(1),
+    POLAR_ACCESS_TOKEN: z.string().min(32),
     POLAR_SERVER: z.enum(["sandbox", "production"]).default("sandbox"),
     POLAR_PRODUCT_ID: z.string().min(1),
 
     CRON_SECRET: z.string().min(32).optional(),
 
     // Optional so the app boots without it; email-based auth flows fail until it is set.
-    RESEND_API_KEY: z.string().min(1).optional(),
+    RESEND_API_KEY: z.string().min(32).optional(),
     // resend.dev can only deliver to the Resend account owner; need a verified domain in production.
     EMAIL_FROM: z.string().min(1).default("Echonic <onboarding@resend.dev>"),
   },
