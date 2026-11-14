@@ -1,7 +1,7 @@
 "use client";
 
 import { ChevronDown } from "lucide-react";
-import { useStore } from "@tanstack/react-form";
+import { useSelector } from "@tanstack/react-form";
 
 import { Button } from "@/components/ui/button";
 import { DrawerTrigger } from "@/components/ui/drawer";
@@ -15,7 +15,7 @@ export function VoiceSelectorButton() {
   const { allVoices } = useTTSVoices();
 
   const form = useTypedAppFormContext(ttsFormOptions);
-  const voiceId = useStore(form.store, (s) => s.values.voiceId);
+  const voiceId = useSelector(form.store, (s) => s.values.voiceId);
 
   const currentVoice = allVoices.find((v) => v.id === voiceId) ?? allVoices[0];
 

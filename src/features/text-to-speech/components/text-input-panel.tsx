@@ -1,7 +1,7 @@
 "use client";
 
 import { Coins } from "lucide-react";
-import { useStore } from "@tanstack/react-form";
+import { useSelector } from "@tanstack/react-form";
 
 import { SettingsDrawer } from "@/features/text-to-speech/components/settings-drawer";
 import { HistoryDrawer } from "@/features/text-to-speech/components/history-drawer";
@@ -20,9 +20,9 @@ import { PromptSuggestions } from "@/features/text-to-speech/components/prompt-s
 export function TextInputPanel() {
   const form = useTypedAppFormContext(ttsFormOptions);
 
-  const text = useStore(form.store, (s) => s.values.text);
-  const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
-  const isValid = useStore(form.store, (s) => s.isValid);
+  const text = useSelector(form.store, (s) => s.values.text);
+  const isSubmitting = useSelector(form.store, (s) => s.isSubmitting);
+  const isValid = useSelector(form.store, (s) => s.isValid);
 
   return (
     <div className="flex h-full min-h-0 flex-col flex-1">

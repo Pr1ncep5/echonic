@@ -1,6 +1,6 @@
 "use client";
 
-import { useStore } from "@tanstack/react-form";
+import { useSelector } from "@tanstack/react-form";
 
 import { VOICE_CATEGORY_LABELS } from "@/features/voices/data/voice-categories";
 
@@ -25,8 +25,8 @@ export function VoiceSelector() {
   const { customVoices, systemVoices, allVoices: voices } = useTTSVoices();
 
   const form = useTypedAppFormContext(ttsFormOptions);
-  const voiceId = useStore(form.store, (s) => s.values.voiceId);
-  const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
+  const voiceId = useSelector(form.store, (s) => s.values.voiceId);
+  const isSubmitting = useSelector(form.store, (s) => s.isSubmitting);
 
   const selectedVoice = voices.find((v) => v.id === voiceId);
   const hasMissingSelectedVoice = Boolean(voiceId) && !selectedVoice;

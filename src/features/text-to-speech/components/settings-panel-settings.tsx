@@ -1,7 +1,7 @@
 "use client";
 
 import { RotateCcw } from "lucide-react";
-import { useStore } from "@tanstack/react-form";
+import { useSelector } from "@tanstack/react-form";
 
 import { Button } from "@/components/ui/button";
 import { Field, FieldDescription, FieldGroup, FieldLabel } from "@/components/ui/field";
@@ -17,8 +17,8 @@ import { VoiceSelector } from "@/features/text-to-speech/components/voice-select
 
 export function SettingsPanelSettings() {
   const form = useTypedAppFormContext(ttsFormOptions);
-  const isSubmitting = useStore(form.store, (s) => s.isSubmitting);
-  const isDefault = useStore(form.store, (s) =>
+  const isSubmitting = useSelector(form.store, (s) => s.isSubmitting);
+  const isDefault = useSelector(form.store, (s) =>
     sliders.every((slider) => s.values[slider.id] === defaultTTSValues[slider.id]),
   );
 
