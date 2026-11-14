@@ -29,7 +29,7 @@ A Voice created by cloning, owned by one Organization and usable by all its Memb
 _Avoid_: Cloned voice, user voice, private voice
 
 **Voice cloning**:
-Creating a Custom voice from an audio sample, uploaded or recorded in the browser.
+Creating a Custom voice from an audio sample, uploaded or recorded in the browser. The Member doing it must confirm they are the speaker or have the speaker's permission.
 _Avoid_: Voice training, voice upload
 
 ### Speech
@@ -53,3 +53,5 @@ _Avoid_: Metric, charge, meter event
 - An Organization owns many Custom voices and many Generations. Neither belongs to a User.
 - If a Member leaves, the Custom voices they cloned stay with the Organization.
 - Deleting a Voice never deletes its Generations.
+- Any Member can clone a voice, generate speech and delete a Generation. Only owners and admins can delete a Custom voice or manage the Subscription.
+- Deleting an Organization ends its Subscription.

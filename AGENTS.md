@@ -6,7 +6,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Open-source text-to-speech and voice cloning for teams. Next.js App Router, tRPC, Drizzle, Effect.ts, Better Auth, Polar billing, Cloudflare R2.
 
-Domain vocabulary lives in `GLOSSARY.md`. Read it before naming anything. Hard-to-reverse decisions live in `docs/adr/`.
+Domain vocabulary lives in `GLOSSARY.md`. Read it before naming anything. Hard-to-reverse decisions live in `docs/adr/`; smaller ones, with their reasons, in `docs/decisions.md`. Open follow-ups are in `TODO.md`.
 
 ## Commands
 
@@ -28,7 +28,9 @@ Lint is oxlint, format is oxfmt. Do not hand-format or argue with them.
 - tRPC: any procedure touching Custom voices, Generations or billing uses `orgProcedure` and filters by `ctx.orgId`. Queries that list Voices must still include System voices.
 - Route Handlers (`src/app/api`): take `orgId` only from the session's `activeOrganizationId`.
 - Never accept an `orgId` from client input.
-- Paid operations check for an active Polar subscription first, then ingest a usage event after the work succeeds.
+- Paid operations check for an active Polar subscription first, then queue a usage event in the same transaction as the row for the work.
+- Billing and deleting a Custom voice are for owners and admins: use `orgAdminProcedure`.
+- Deleting from R2 and reporting usage to Polar go through the outbox (`features/outbox`, ADR 0002), never as a bare call after a database write.
 
 ## Structure
 
@@ -44,5 +46,6 @@ Lint is oxlint, format is oxfmt. Do not hand-format or argue with them.
 - Import across directories with `@/`; relative imports only for siblings.
 - Server config comes from `@/lib/env`, never `process.env`. Do not add new exceptions.
 - No `console.log`. Use `Sentry.logger`.
+- tRPC procedures run workflows with `runEffect` (`src/trpc/run-effect.ts`). When the client must react to a failure in a specific way, give it an `appError` code; never match on error messages.
 - Filenames are kebab-case. No barrel files (`index.ts` that only re-exports).
 - Comments only for non-obvious why (business rules, bug workarounds).
