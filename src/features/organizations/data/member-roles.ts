@@ -1,6 +1,10 @@
 export const MEMBER_ROLES = [
-  { value: "member", label: "Member", description: "Can use voices and generate speech" },
-  { value: "admin", label: "Admin", description: "Can also invite and manage members" },
+  { value: "member", label: "Member", description: "Can create voices and generate speech" },
+  {
+    value: "admin",
+    label: "Admin",
+    description: "Can also manage members, billing and delete voices",
+  },
   {
     value: "owner",
     label: "Owner",
