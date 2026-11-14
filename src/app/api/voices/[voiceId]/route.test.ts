@@ -1,7 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { describe, expect, it } from "vitest";
 
 import { env } from "@/lib/env";
-import type { storedAudioResponse } from "@/lib/stored-audio-response";
 import {
   createCustomVoice,
   createMember,
@@ -10,11 +9,6 @@ import {
 } from "@/tests/factories";
 import { signInAs } from "@/tests/session";
 import { GET } from "./route";
-
-// Fetching the bytes from R2 is not what these tests are about: who gets that far is.
-vi.mock("@/lib/stored-audio-response", () => ({
-  storedAudioResponse: vi.fn<typeof storedAudioResponse>(async () => new Response("audio")),
-}));
 
 function getVoiceAudio(voiceId: string) {
   return GET(new Request(`${env.APP_URL}/api/voices/${voiceId}`), {
