@@ -1,5 +1,5 @@
 import { TextToSpeechDetailView } from "@/features/text-to-speech/views/text-to-speech-detail-view";
-import { trpc, HydrateClient, prefetch } from "@/trpc/server";
+import { trpc, HydrateClient, prefetch, prefetchInfinite } from "@/trpc/server";
 
 export default async function TextToSpeechDetailPage({
   params,
@@ -8,7 +8,12 @@ export default async function TextToSpeechDetailPage({
 
   prefetch(trpc.generations.getById.queryOptions({ id: generationId }));
   prefetch(trpc.voices.getAll.queryOptions());
-  prefetch(trpc.generations.getAll.queryOptions());
+  prefetchInfinite(
+    trpc.generations.list.infiniteQueryOptions(
+      {},
+      { getNextPageParam: (lastPage) => lastPage.nextCursor },
+    ),
+  );
 
   return (
     <HydrateClient>

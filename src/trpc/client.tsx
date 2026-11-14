@@ -9,6 +9,7 @@ import { useState } from "react";
 import { makeQueryClient } from "./query-client";
 import type { AppRouter } from "./routers/_app";
 import superjson from "superjson";
+import { env } from "@/lib/env";
 
 export const { TRPCProvider, useTRPC } = createTRPCContext<AppRouter>();
 
@@ -29,8 +30,8 @@ function getQueryClient() {
 function getUrl() {
   const base = (() => {
     if (typeof window !== "undefined") return "";
-    if (process.env.APP_URL) return process.env.APP_URL;
-    return "http://localhost:3000";
+    // Server-side render of a client component: the app serves auth and tRPC from one origin.
+    return new URL(env.NEXT_PUBLIC_BETTER_AUTH_URL).origin;
   })();
   return `${base}/api/trpc`;
 }

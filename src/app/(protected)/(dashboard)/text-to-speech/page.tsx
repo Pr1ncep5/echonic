@@ -1,7 +1,7 @@
 import { TextToSpeechView } from "@/features/text-to-speech/views/text-to-speech-view";
 import type { Metadata } from "next";
 
-import { trpc, HydrateClient, prefetch } from "@/trpc/server";
+import { trpc, HydrateClient, prefetch, prefetchInfinite } from "@/trpc/server";
 
 export const metadata: Metadata = { title: "Text to Speech" };
 
@@ -13,7 +13,12 @@ export default async function TextToSpeechPage({
   const { text, voiceId } = await searchParams;
 
   prefetch(trpc.voices.getAll.queryOptions());
-  prefetch(trpc.generations.getAll.queryOptions());
+  prefetchInfinite(
+    trpc.generations.list.infiniteQueryOptions(
+      {},
+      { getNextPageParam: (lastPage) => lastPage.nextCursor },
+    ),
+  );
 
   return (
     <HydrateClient>
