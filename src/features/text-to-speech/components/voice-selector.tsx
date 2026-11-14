@@ -42,13 +42,13 @@ export function VoiceSelector() {
 
   return (
     <Field>
-      <FieldLabel>Voice style</FieldLabel>
+      <FieldLabel>Voice</FieldLabel>
       <Select
         value={voiceId}
         onValueChange={(v) => form.setFieldValue("voiceId", v)}
         disabled={isSubmitting}
       >
-        <SelectTrigger className="w-full h-auto gap-1 rounded-lg bg-white px-2 py-1">
+        <SelectTrigger className="w-full h-auto gap-1 rounded-lg bg-background px-2 py-1">
           <SelectValue>
             {currentVoice && (
               <>
@@ -65,7 +65,7 @@ export function VoiceSelector() {
           {hasMissingSelectedVoice && currentVoice && (
             <>
               <SelectGroup>
-                <SelectLabel>Selected Voice</SelectLabel>
+                <SelectLabel>Selected voice</SelectLabel>
                 <SelectItem value={currentVoice.id}>
                   <VoiceAvatar seed={currentVoice.id} name={currentVoice.name} />
                   <span className="truncate text-sm font-medium">
@@ -79,7 +79,7 @@ export function VoiceSelector() {
           )}
           {customVoices.length > 0 && (
             <SelectGroup>
-              <SelectLabel>Team Voices</SelectLabel>
+              <SelectLabel>Custom voices</SelectLabel>
               {customVoices.map((v) => (
                 <SelectItem key={v.id} value={v.id}>
                   <VoiceAvatar seed={v.id} name={v.name} />
@@ -93,7 +93,7 @@ export function VoiceSelector() {
           {customVoices.length > 0 && systemVoices.length > 0 && <SelectSeparator />}
           {systemVoices.length > 0 && (
             <SelectGroup>
-              <SelectLabel>Built-in Voices</SelectLabel>
+              <SelectLabel>System voices</SelectLabel>
               {systemVoices.map((v) => (
                 <SelectItem key={v.id} value={v.id}>
                   <VoiceAvatar seed={v.id} name={v.name} />

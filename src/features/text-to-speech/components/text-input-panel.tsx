@@ -11,7 +11,8 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { useTypedAppFormContext } from "@/hooks/use-app-form";
 
-import { COST_PER_UNIT, TEXT_MAX_LENGTH } from "@/features/text-to-speech/data/constants";
+import { formatEstimate } from "@/features/billing/lib/format-price";
+import { TEXT_MAX_LENGTH } from "@/features/text-to-speech/data/constants";
 import { ttsFormOptions } from "@/features/text-to-speech/components/text-to-speech-form";
 import { GenerateButton } from "@/features/text-to-speech/components/generate-button";
 import { PromptSuggestions } from "@/features/text-to-speech/components/prompt-suggestions";
@@ -34,9 +35,10 @@ export function TextInputPanel() {
               value={field.state.value}
               onChange={(e) => field.handleChange(e.target.value)}
               placeholder="Start typing or paste your text here..."
-              className="absolute inset-0 resize-none border-0 bg-transparent p-4 pb-6 lg:p-6 lg:pb-8 text-base! leading-relaxed tracking-tight shadow-none wrap-break-word focus-visible:ring-0"
+              className="absolute inset-0 resize-none border-0 bg-transparent p-4 pb-6 lg:p-6 lg:pb-8 text-base! leading-relaxed tracking-tight shadow-none wrap-break-word focus-visible:ring-0 dark:bg-transparent"
               maxLength={TEXT_MAX_LENGTH}
-              disabled={isSubmitting}
+              // Read-only rather than disabled, so the text stays legible while it is spoken.
+              readOnly={isSubmitting}
             />
           )}
         </form.Field>
@@ -64,17 +66,17 @@ export function TextInputPanel() {
         {text.length > 0 ? (
           <div className="hidden items-center justify-between lg:flex">
             <Badge variant="outline" className="gap-1.5 border-dashed">
-              <Coins className="size-3 text-chart-5" />
+              <Coins className="size-3 text-muted-foreground" />
               <span className="text-xs">
-                <span className="tabular-nums">${(text.length * COST_PER_UNIT).toFixed(4)}</span>
-                &nbsp; estimated
+                <span className="tabular-nums">{formatEstimate(text.length)}</span>
+                &nbsp;estimated
               </span>
             </Badge>
             <div className="flex items-center gap-3">
               <p className="text-xs tracking-tight">
-                {text.length.toLocaleString()}
+                {text.length.toLocaleString("en-US")}
                 <span className="text-muted-foreground">
-                  &nbsp;/&nbsp;{TEXT_MAX_LENGTH.toLocaleString()} characters
+                  &nbsp;/&nbsp;{TEXT_MAX_LENGTH.toLocaleString("en-US")} characters
                 </span>
               </p>
               <GenerateButton
