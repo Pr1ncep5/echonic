@@ -1,0 +1,21 @@
+# The database the tests run against. Start it with `bun run test:db`.
+# It listens on 5433 so it never collides with a development Postgres on 5432, and keeps
+# its data in memory: stopping the container throws everything away.
+name: echonic-test
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: echonic
+      POSTGRES_PASSWORD: echonic
+      POSTGRES_DB: echonic_test
+    ports:
+      - "127.0.0.1:5433:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U echonic -d echonic_test"]
+      interval: 1s
+      timeout: 3s
+      retries: 30
