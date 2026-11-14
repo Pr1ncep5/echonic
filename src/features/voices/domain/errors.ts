@@ -1,4 +1,5 @@
 import { Data } from "effect";
+import { TRPCError } from "@trpc/server";
 import type { z } from "zod";
 import type {
   BillingServiceError,
@@ -13,6 +14,33 @@ import type { StorageUploadError } from "@/lib/r2";
 export class InvalidVoiceInputError extends Data.TaggedError("InvalidVoiceInput")<{
   readonly issues: z.ZodError["issues"];
 }> {}
+
+/**
+ * Thrown when the uploader has not confirmed they have the right to clone the voice.
+ */
+export class ConsentMissingError extends Data.TaggedError("ConsentMissing") {}
+
+/**
+ * Thrown when the Custom voice does not exist or belongs to another Organization.
+ */
+export class CustomVoiceNotFoundError extends Data.TaggedError("CustomVoiceNotFound")<{
+  readonly voiceId: string;
+}> {}
+
+export type DeleteVoiceError = CustomVoiceNotFoundError | DatabaseError;
+
+export function deleteVoiceErrorToTRPCError(error: DeleteVoiceError): TRPCError {
+  // oxlint-disable-next-line eslint/no-underscore-dangle
+  switch (error._tag) {
+    case "CustomVoiceNotFound":
+      return new TRPCError({ code: "NOT_FOUND", message: "Voice not found" });
+    case "Database":
+      return new TRPCError({
+        code: "INTERNAL_SERVER_ERROR",
+        message: "Failed to delete the voice. Please retry.",
+      });
+  }
+}
 
 /**
  * Thrown when the upload has no Content-Type header.
@@ -73,6 +101,7 @@ export type CreateVoiceError =
   | SubscriptionRequiredError
   | BillingServiceError
   | InvalidVoiceInputError
+  | ConsentMissingError
   | ContentTypeMissingError
   | AudioUnsupportedTypeError
   | AudioMissingError
@@ -97,6 +126,7 @@ export function isInfrastructureError(error: CreateVoiceError): boolean {
       return true;
     case "SubscriptionRequired":
     case "InvalidVoiceInput":
+    case "ConsentMissing":
     case "ContentTypeMissing":
     case "AudioUnsupportedType":
     case "AudioMissing":
@@ -117,7 +147,10 @@ export function toErrorResponse(error: CreateVoiceError): Response {
   // oxlint-disable-next-line eslint/no-underscore-dangle
   switch (error._tag) {
     case "SubscriptionRequired":
-      return Response.json({ error: "SUBSCRIPTION_REQUIRED" }, { status: 403 });
+      return Response.json(
+        { error: "Subscription required", code: "SUBSCRIPTION_REQUIRED" },
+        { status: 403 },
+      );
     case "BillingService":
       return Response.json(
         { error: "Failed to communicate with billing service" },
@@ -125,6 +158,11 @@ export function toErrorResponse(error: CreateVoiceError): Response {
       );
     case "InvalidVoiceInput":
       return Response.json({ error: "Invalid input", issues: error.issues }, { status: 400 });
+    case "ConsentMissing":
+      return Response.json(
+        { error: "Confirm that you have the right to clone this voice." },
+        { status: 400 },
+      );
     case "ContentTypeMissing":
       return Response.json({ error: "Missing Content-Type header" }, { status: 400 });
     case "AudioUnsupportedType":
