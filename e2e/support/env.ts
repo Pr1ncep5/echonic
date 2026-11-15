@@ -20,6 +20,9 @@ export const DATABASE_URL = `postgresql://echonic:echonic@localhost:5433/${DATAB
  */
 export const AUTH_SECRET = "e2e-secret-e2e-secret-e2e-secret-e2e";
 
+/** What a journey sends to /api/cron/outbox to run the outbox, as the scheduler would. */
+export const CRON_SECRET = "e2e-cron-secret-e2e-cron-secret-e2e";
+
 export const STORAGE_STATE = "e2e/.auth/owner.json";
 
 const R2_NAMES = [
@@ -72,6 +75,6 @@ export function appEnv(source: NodeJS.ProcessEnv): Record<string, string> {
     SENTRY_DSN: "https://public@sentry.invalid/1",
     NEXT_PUBLIC_SENTRY_DSN: "https://public@sentry.invalid/1",
 
-    CRON_SECRET: "e2e-cron-secret-e2e-cron-secret-e2e",
+    CRON_SECRET,
   };
 }

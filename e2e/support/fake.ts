@@ -11,6 +11,12 @@ export const fakePolar = {
     await fetch(`${FAKE_URL}/__test/subscriptions/${orgId}`, { method: "PUT" });
   },
 
+  async isSubscribed(orgId: string): Promise<boolean> {
+    const response = await fetch(`${FAKE_URL}/__test/subscriptions/${orgId}`);
+    const state: { subscribed: boolean } = await response.json();
+    return state.subscribed;
+  },
+
   /** Every Usage event the app has reported so far. */
   async usageEvents(): Promise<
     { name: string; external_id: string; external_customer_id: string }[]

@@ -4,7 +4,6 @@ import path from "node:path";
 import { Client } from "pg";
 
 import {
-  APP_URL,
   DATABASE_ADMIN_URL,
   DATABASE_NAME,
   DATABASE_URL,
@@ -45,26 +44,9 @@ export default async function globalSetup() {
     env: { ...process.env, ...appEnv(process.env) },
   });
 
-  const { sessionCookie, expires } = await seedDatabase();
-  await uploadSystemVoiceSample(process.env);
+  const ownerState = await seedDatabase();
+  await uploadSystemVoiceSample();
 
   await mkdir(path.dirname(STORAGE_STATE), { recursive: true });
-  await writeFile(
-    STORAGE_STATE,
-    JSON.stringify({
-      cookies: [
-        {
-          name: "better-auth.session_token",
-          value: sessionCookie,
-          domain: new URL(APP_URL).hostname,
-          path: "/",
-          expires: Math.floor(expires.getTime() / 1000),
-          httpOnly: true,
-          secure: false,
-          sameSite: "Lax",
-        },
-      ],
-      origins: [],
-    }),
-  );
+  await writeFile(STORAGE_STATE, JSON.stringify(ownerState));
 }
