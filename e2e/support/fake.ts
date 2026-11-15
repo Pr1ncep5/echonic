@@ -1,31 +1,37 @@
 import { FAKE_URL } from "./env";
 
-/** Steers and inspects the fake Polar from a test. */
-export const fakePolar = {
-  /** Ends the Organization's Subscription, as if it had never subscribed. */
-  async unsubscribe(orgId: string) {
-    await fetch(`${FAKE_URL}/__test/subscriptions/${orgId}`, { method: "DELETE" });
-  },
+export interface UsageEvent {
+  name: string;
+  external_id: string;
+  external_customer_id: string;
+}
 
-  async subscribe(orgId: string) {
-    await fetch(`${FAKE_URL}/__test/subscriptions/${orgId}`, { method: "PUT" });
-  },
+/**
+ * Steers and inspects the fake Polar for one Organization. Everything is scoped to that
+ * Organization, so journeys running in parallel do not see each other's state.
+ */
+export function polarFor(orgId: string) {
+  const subscription = `${FAKE_URL}/__test/subscriptions/${orgId}`;
 
-  async isSubscribed(orgId: string): Promise<boolean> {
-    const response = await fetch(`${FAKE_URL}/__test/subscriptions/${orgId}`);
-    const state: { subscribed: boolean } = await response.json();
-    return state.subscribed;
-  },
+  return {
+    /** Ends the Subscription, as if the Organization had never subscribed. */
+    async unsubscribe() {
+      await fetch(subscription, { method: "DELETE" });
+    },
 
-  /** Every Usage event the app has reported so far. */
-  async usageEvents(): Promise<
-    { name: string; external_id: string; external_customer_id: string }[]
-  > {
-    const response = await fetch(`${FAKE_URL}/__test/events`);
-    return response.json();
-  },
+    async isSubscribed(): Promise<boolean> {
+      const response = await fetch(subscription);
+      const state: { subscribed: boolean } = await response.json();
+      return state.subscribed;
+    },
 
-  async clearUsageEvents() {
-    await fetch(`${FAKE_URL}/__test/events`, { method: "DELETE" });
-  },
-};
+    /** The Usage events the app has reported for this Organization so far. */
+    async usageEvents(): Promise<UsageEvent[]> {
+      const response = await fetch(`${FAKE_URL}/__test/events`);
+      const events: UsageEvent[] = await response.json();
+      return events.filter((event) => event.external_customer_id === orgId);
+    },
+  };
+}
+
+export type FakePolar = ReturnType<typeof polarFor>;

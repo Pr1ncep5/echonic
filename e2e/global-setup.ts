@@ -1,20 +1,13 @@
 import { execSync } from "node:child_process";
-import { mkdir, writeFile } from "node:fs/promises";
-import path from "node:path";
 import { Client } from "pg";
 
-import {
-  DATABASE_ADMIN_URL,
-  DATABASE_NAME,
-  DATABASE_URL,
-  STORAGE_STATE,
-  appEnv,
-} from "./support/env";
-import { seedDatabase, uploadSystemVoiceSample } from "./support/seed";
+import { DATABASE_ADMIN_URL, DATABASE_NAME, DATABASE_URL, appEnv } from "./support/env";
+import { seedSystemVoice } from "./support/seed";
 
 /**
- * Runs once before the journeys: rebuilds the end-to-end database, seeds it, and saves the
- * owner's session cookie where every test picks it up.
+ * Runs once before the journeys: rebuilds the end-to-end database and seeds the one thing
+ * they share, a System voice. Everything else a journey needs it creates for itself (see
+ * support/test.ts).
  */
 export default async function globalSetup() {
   const admin = new Client({ connectionString: DATABASE_ADMIN_URL });
@@ -44,9 +37,5 @@ export default async function globalSetup() {
     env: { ...process.env, ...appEnv(process.env) },
   });
 
-  const ownerState = await seedDatabase();
-  await uploadSystemVoiceSample();
-
-  await mkdir(path.dirname(STORAGE_STATE), { recursive: true });
-  await writeFile(STORAGE_STATE, JSON.stringify(ownerState));
+  await seedSystemVoice();
 }

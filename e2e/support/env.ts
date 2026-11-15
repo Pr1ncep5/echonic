@@ -23,8 +23,6 @@ export const AUTH_SECRET = "e2e-secret-e2e-secret-e2e-secret-e2e";
 /** What a journey sends to /api/cron/outbox to run the outbox, as the scheduler would. */
 export const CRON_SECRET = "e2e-cron-secret-e2e-cron-secret-e2e";
 
-export const STORAGE_STATE = "e2e/.auth/owner.json";
-
 const R2_NAMES = [
   "R2_ACCOUNT_ID",
   "R2_ACCESS_KEY_ID",

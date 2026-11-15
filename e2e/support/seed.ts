@@ -8,13 +8,9 @@ import { account, member, organization, session, user, voice } from "../../src/d
 import { APP_URL, AUTH_SECRET, DATABASE_URL } from "./env";
 import { putAudio } from "./r2";
 
-/** What every journey starts from: one verified owner of one Organization, one System voice. */
-export const OWNER = { id: "user_e2e_owner", name: "Olivia Owner", email: "owner@e2e.test" };
-export const OWNER_PASSWORD = "e2e-owner-password";
-export const ORGANIZATION = { id: "org_e2e", name: "E2E Organization", slug: "e2e-organization" };
+/** The one row every journey shares. It is only read, so sharing it is safe. */
 export const SYSTEM_VOICE = { id: "voice_e2e_system", name: "Aaron" };
 
-const OWNER_SESSION_TOKEN = "e2e-owner-session-token";
 const SYSTEM_VOICE_KEY = `voices/system/${SYSTEM_VOICE.id}`;
 const SESSION_LIFETIME_MS = 24 * 60 * 60 * 1000;
 
@@ -42,103 +38,122 @@ function signedSessionCookie(token: string): string {
 
 /** A browser state signed in with the given session; pass it to `browser.newContext`. */
 function storageStateFor(token: string) {
+  const cookie = {
+    domain: new URL(APP_URL).hostname,
+    path: "/",
+    expires: Math.floor((Date.now() + SESSION_LIFETIME_MS) / 1000),
+    secure: false,
+    sameSite: "Lax" as const,
+  };
   return {
     cookies: [
       {
+        ...cookie,
         name: "better-auth.session_token",
         value: signedSessionCookie(token),
-        domain: new URL(APP_URL).hostname,
-        path: "/",
-        expires: Math.floor((Date.now() + SESSION_LIFETIME_MS) / 1000),
         httpOnly: true,
-        secure: false,
-        sameSite: "Lax" as const,
       },
+      // The sidebar starts collapsed to icons, which hides the usage card. This is the
+      // cookie the app sets when the user expands it.
+      { ...cookie, name: "sidebar_state", value: "true", httpOnly: false },
     ],
     origins: [],
   };
 }
 
-async function insertSession(db: Database, token: string, userId: string, orgId: string) {
+export type StorageState = ReturnType<typeof storageStateFor>;
+export const SIGNED_OUT: StorageState = { cookies: [], origins: [] };
+
+/** A verified user who belongs to the Organization and has it active in a live session. */
+async function insertSignedInMember(
+  db: Database,
+  orgId: string,
+  role: "owner" | "admin" | "member",
+  name: string,
+) {
+  const suffix = randomUUID();
+  const signedInUser = { id: `user_${suffix}`, name, email: `${suffix}@e2e.test` };
+  const token = `token-${suffix}`;
+
+  await db.insert(user).values({ ...signedInUser, emailVerified: true });
+  await db.insert(member).values({
+    id: `member_${suffix}`,
+    organizationId: orgId,
+    userId: signedInUser.id,
+    role,
+  });
   await db.insert(session).values({
-    id: `session_${token}`,
+    id: `session_${suffix}`,
     token,
-    userId,
+    userId: signedInUser.id,
     activeOrganizationId: orgId,
     expiresAt: new Date(Date.now() + SESSION_LIFETIME_MS),
     updatedAt: new Date(),
   });
+
+  return { ...signedInUser, storageState: storageStateFor(token) };
 }
 
-/** Seeds the starting state and returns the owner's signed-in browser state. */
-export async function seedDatabase() {
-  const password = await hashPassword(OWNER_PASSWORD);
-
-  await withDatabase(async (db) => {
-    await db.insert(user).values({ ...OWNER, emailVerified: true });
-    // Lets the owner sign in through the form; every other journey uses the session below.
-    await db.insert(account).values({
-      id: "account_e2e_owner",
-      accountId: OWNER.id,
-      providerId: "credential",
-      userId: OWNER.id,
-      password,
-      updatedAt: new Date(),
-    });
-    await db.insert(organization).values(ORGANIZATION);
-    await db.insert(member).values({
-      id: "member_e2e_owner",
-      organizationId: ORGANIZATION.id,
-      userId: OWNER.id,
-      role: "owner",
-    });
-    await insertSession(db, OWNER_SESSION_TOKEN, OWNER.id, ORGANIZATION.id);
-    await db.insert(voice).values({
+/** Run once, before any journey. */
+export async function seedSystemVoice() {
+  await withDatabase((db) =>
+    db.insert(voice).values({
       id: SYSTEM_VOICE.id,
       name: SYSTEM_VOICE.name,
       description: "Soothing and calm",
       variant: "SYSTEM",
       r2ObjectKey: SYSTEM_VOICE_KEY,
-    });
-  });
-
-  return storageStateFor(OWNER_SESSION_TOKEN);
-}
-
-/** The System voice's sample, so its preview plays. scripts/system-voices is not in git. */
-export async function uploadSystemVoiceSample() {
+    }),
+  );
+  // Its sample, so the preview plays. scripts/system-voices is not in git.
   await putAudio(SYSTEM_VOICE_KEY);
 }
 
 /**
- * Adds a second user to the seeded Organization with the given role, already signed in.
- * Returns the browser state to open a context as them.
+ * A new Organization with a signed-in owner. Every journey gets its own, so journeys can
+ * run in parallel and change or delete theirs without affecting each other.
  */
-export async function addSignedInMember(role: "member" | "admin") {
+export async function createOrganization() {
   const suffix = randomUUID();
-  const userId = `user_${suffix}`;
-  const token = `token-${suffix}`;
+  const created = {
+    id: `org_${suffix}`,
+    name: `Org ${suffix.slice(0, 8)}`,
+    slug: `org-${suffix}`,
+  };
 
-  await withDatabase(async (db) => {
-    await db.insert(user).values({
-      id: userId,
-      name: "Mia Member",
-      email: `${suffix}@e2e.test`,
-      emailVerified: true,
-    });
-    await db.insert(member).values({
-      id: `member_${suffix}`,
-      organizationId: ORGANIZATION.id,
-      userId,
-      role,
-    });
-    await insertSession(db, token, userId, ORGANIZATION.id);
+  const owner = await withDatabase(async (db) => {
+    await db.insert(organization).values(created);
+    return insertSignedInMember(db, created.id, "owner", "Olivia Owner");
   });
 
-  return storageStateFor(token);
+  return { ...created, owner };
 }
 
-/** Adds a Custom voice row to an Organization. Its audio is only in R2 if a test puts it there. */
+export type TestOrganization = Awaited<ReturnType<typeof createOrganization>>;
+
+/** Adds another signed-in user to the Organization with the given role. */
+export async function addMember(orgId: string, role: "admin" | "member") {
+  return withDatabase((db) => insertSignedInMember(db, orgId, role, "Mia Member"));
+}
+
+/** Lets the user sign in through the form. Returns the password. */
+export async function givePassword(userId: string): Promise<string> {
+  const password = `password-${randomUUID()}`;
+  const hash = await hashPassword(password);
+  await withDatabase((db) =>
+    db.insert(account).values({
+      id: `account_${randomUUID()}`,
+      accountId: userId,
+      providerId: "credential",
+      userId,
+      password: hash,
+      updatedAt: new Date(),
+    }),
+  );
+  return password;
+}
+
+/** Adds a Custom voice row. Its audio is only in R2 if the journey puts it there. */
 export async function addCustomVoice(orgId: string, name: string) {
   const id = `voice_${randomUUID()}`;
   const r2ObjectKey = `voices/orgs/${orgId}/${id}`;
@@ -146,29 +161,6 @@ export async function addCustomVoice(orgId: string, name: string) {
     db.insert(voice).values({ id, orgId, name, variant: "CUSTOM", r2ObjectKey }),
   );
   return { id, name, r2ObjectKey };
-}
-
-/**
- * Adds another Organization owned by the seeded owner, and a session of theirs with it
- * active, so a journey can destroy it without touching what the other journeys share.
- */
-export async function addOrganizationOwnedByOwner(name: string) {
-  const suffix = randomUUID();
-  const id = `org_${suffix}`;
-  const token = `token-${suffix}`;
-
-  await withDatabase(async (db) => {
-    await db.insert(organization).values({ id, name, slug: `org-${suffix}` });
-    await db.insert(member).values({
-      id: `member_${suffix}`,
-      organizationId: id,
-      userId: OWNER.id,
-      role: "owner",
-    });
-    await insertSession(db, token, OWNER.id, id);
-  });
-
-  return { id, name, storageState: storageStateFor(token) };
 }
 
 export async function organizationExists(id: string): Promise<boolean> {

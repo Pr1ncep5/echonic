@@ -17,7 +17,7 @@ type GenerateBody = paths["/generate"]["post"]["requestBody"]["content"]["applic
 const FAIL_MARKER = "[fail]";
 
 const unsubscribed = new Set<string>();
-let ingestedEvents: unknown[] = [];
+const ingestedEvents: unknown[] = [];
 
 function customerState(request: Request, orgId: string): Response {
   if (request.method !== "GET") return new Response(null, { status: 405 });
@@ -82,10 +82,8 @@ async function route(request: Request): Promise<Response> {
     if (method === "DELETE") unsubscribed.add(orgId);
     return Response.json({ orgId, subscribed: !unsubscribed.has(orgId) });
   }
-  if (pathname === "/__test/events") {
-    if (method === "DELETE") ingestedEvents = [];
-    return Response.json(ingestedEvents);
-  }
+  // Never cleared: journeys run in parallel and each reads only its own Organization's.
+  if (pathname === "/__test/events") return Response.json(ingestedEvents);
   if (pathname === "/__test/health") return new Response("ok");
 
   return Response.json(
