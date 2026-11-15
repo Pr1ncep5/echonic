@@ -42,7 +42,9 @@ const R2_FILE = ".env.e2e";
  * journeys to the development bucket.
  */
 function r2Source(): { values: Record<string, string | undefined>; fix: string } {
-  if (process.env.CI) {
+  // Exactly "true", as CI runners set it: CI=false or CI=0 on a developer's machine must
+  // not open the environment path.
+  if (process.env.CI === "true") {
     return { values: process.env, fix: "set the E2E_R2_* repository secrets" };
   }
   if (!existsSync(R2_FILE)) {
