@@ -20,7 +20,11 @@ export class TextToSpeechPage {
     this.historyTab = page.getByRole("tab", { name: "History" });
     this.history = page.getByRole("tabpanel", { name: "History" });
     this.subscriptionRequired = page.getByText("Subscription required");
-    this.subscribeButton = page.getByRole("button", { name: "Subscribe" });
+    // The toast's action. Scoped to the toasts because the sidebar's usage card also shows
+    // a "Subscribe" button once it has loaded an Organization without a Subscription.
+    this.subscribeButton = page
+      .getByRole("region", { name: /Notifications/ })
+      .getByRole("button", { name: "Subscribe" });
     this.generationFailed = page.getByText("Speech generation failed. Please try again.");
   }
 
