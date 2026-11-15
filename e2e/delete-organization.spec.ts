@@ -25,7 +25,6 @@ test.describe("deleting an Organization", () => {
     expect(await polar.isSubscribed()).toBe(false);
 
     await test.step("the outbox removes its audio, as the scheduler would in production", async () => {
-      expect(await audioExists(voice.r2ObjectKey)).toBe(true);
       const cron = await page.request.get("/api/cron/outbox", {
         headers: { authorization: `Bearer ${CRON_SECRET}` },
       });

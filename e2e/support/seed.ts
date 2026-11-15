@@ -4,7 +4,7 @@ import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Client } from "pg";
 
-import { account, member, organization, session, user, voice } from "../../src/db/schema";
+import { account, member, organization, session, user, voice } from "@/db/schema";
 import { APP_URL, AUTH_SECRET, DATABASE_URL } from "./env";
 import { putAudio } from "./r2";
 

@@ -1,6 +1,6 @@
 import { HeadObjectCommand, PutObjectCommand, S3Client } from "@aws-sdk/client-s3";
 
-import { wavOfSeconds } from "../../src/tests/audio";
+import { wavOfSeconds } from "@/tests/audio";
 import { r2Env } from "./env";
 
 /** Reads and writes the R2 test bucket directly, to set up and check what the app stored. */

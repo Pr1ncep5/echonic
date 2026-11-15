@@ -1,4 +1,4 @@
-import { wavOfSeconds } from "../src/tests/audio";
+import { wavOfSeconds } from "@/tests/audio";
 import { audioExists } from "./support/r2";
 import { customVoicesOf } from "./support/seed";
 import { expect, test } from "./support/test";
@@ -23,6 +23,7 @@ test.describe("cloning a voice", () => {
     await expect(voicesPage.voice(name)).toBeVisible();
 
     const [created] = await customVoicesOf(organization.id);
+    expect(created?.r2ObjectKey, "the Custom voice row and its R2 key").toBeTruthy();
     const sampleKey = created?.r2ObjectKey ?? "";
 
     await test.step("the sample is in R2 and comes back through our route", async () => {

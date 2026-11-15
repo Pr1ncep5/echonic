@@ -66,6 +66,8 @@ jobs:
     # Needs the R2 test bucket, and GitHub gives no secrets to pull requests from forks,
     # so those skip this job instead of failing it. Building the app is part of it.
     if: github.event.pull_request.head.repo.full_name == github.repository
+    # A hung server or browser must not hold the job for GitHub's default six hours.
+    timeout-minutes: 20
     env:
       R2_ACCOUNT_ID: ${{ secrets.E2E_R2_ACCOUNT_ID }}
       R2_ACCESS_KEY_ID: ${{ secrets.E2E_R2_ACCESS_KEY_ID }}
@@ -86,6 +88,13 @@ jobs:
           --health-timeout 3s
           --health-retries 30
     steps:
+      # An unset secret resolves to an empty string, so fail here with a clear
+      # message instead of partway through the Playwright run.
+      - name: Check R2 secrets are set
+        run: |
+          for v in R2_ACCOUNT_ID R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_BUCKET_NAME; do
+            [ -n "${!v}" ] || { echo "::error::Missing repository secret E2E_$v"; exit 1; }
+          done
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
         with:

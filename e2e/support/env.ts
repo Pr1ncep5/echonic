@@ -74,5 +74,10 @@ export function appEnv(source: NodeJS.ProcessEnv): Record<string, string> {
     NEXT_PUBLIC_SENTRY_DSN: "https://public@sentry.invalid/1",
 
     CRON_SECRET,
+
+    // Locally, Next also reads the developer's .env, which holds real keys. Setting these
+    // here keeps a test run from uploading source maps to Sentry or sending real email.
+    SENTRY_AUTH_TOKEN: "",
+    RESEND_API_KEY: "e2e-not-a-real-resend-key-e2e-not-real",
   };
 }

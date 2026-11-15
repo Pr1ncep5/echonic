@@ -7,8 +7,8 @@
  */
 import { serve } from "bun";
 
-import type { paths } from "../../src/types/chatterbox-api";
-import { wavOfSeconds } from "../../src/tests/audio";
+import type { paths } from "@/types/chatterbox-api";
+import { wavOfSeconds } from "@/tests/audio";
 import { APP_URL, FAKE_PORT } from "../support/env";
 
 type GenerateBody = paths["/generate"]["post"]["requestBody"]["content"]["application/json"];
