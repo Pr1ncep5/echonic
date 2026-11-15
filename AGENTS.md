@@ -36,9 +36,13 @@ Vitest, against a real Postgres. Run `bun run test` together with `bun run check
 
 End-to-end journeys live in `e2e/` and run with Playwright against the built app. Keep them few: one per journey a user would notice breaking, not one per rule (rules belong in Vitest).
 
-- The app talks to `e2e/fakes/server.ts` instead of Polar and Chatterbox, and to a real R2 test bucket. Steer the fake from a test with `e2e/support/fake.ts`; put `[fail]` in the text to make Chatterbox reject it.
-- Every journey starts signed in as the owner seeded in `e2e/support/seed.ts`. Journeys share one database and run one at a time, so a journey that changes shared state (the Subscription) puts it back in `beforeEach`.
-- Find elements the way a user does: by role and label, not by class or test id.
+IMPORTANT: read `e2e/ARCHITECTURE.md` before adding or changing a journey; `e2e/README.md` covers running and debugging them. The rules that matter most:
+
+- Spec files import `test` and `expect` from `./support/test`, never from `@playwright/test`. Its fixtures give every journey its own Organization and signed-in owner, so journeys run in parallel and must not share state.
+- No selectors in spec files: they live in a page object in `e2e/pages/`, one per route. Find elements by role and label; a test id is the last resort.
+- No `waitForTimeout`. Use web-first assertions and `expect.poll`.
+- The app talks to `e2e/fakes/server.ts` instead of Polar and Chatterbox, and to a real R2 test bucket.
+- `bun run e2e:serve` keeps the built app running so `bun run e2e` starts in seconds while writing a journey.
 
 Lint is oxlint, format is oxfmt. Do not hand-format or argue with them.
 

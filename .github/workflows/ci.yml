@@ -92,7 +92,7 @@ jobs:
           node-version: 24
       - uses: ./.github/actions/setup
       - run: bunx playwright install --with-deps chromium
-      - run: bun run test:e2e
+      - run: bun run e2e
       - uses: actions/upload-artifact@v4
         if: failure()
         with:

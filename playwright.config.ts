@@ -4,7 +4,9 @@ import { config as loadEnv } from "dotenv";
 import { APP_PORT, APP_URL, FAKE_URL, appEnv } from "./e2e/support/env";
 
 // The R2 test bucket's credentials. In CI they come from secrets instead of this file.
-loadEnv({ path: ".env.e2e", quiet: true });
+// `override` so they win even if the developer's .env is already in the environment
+// (Bun loads it): the journeys must never touch the development bucket.
+loadEnv({ path: ".env.e2e", quiet: true, override: true });
 
 const isCI = Boolean(process.env.CI);
 
