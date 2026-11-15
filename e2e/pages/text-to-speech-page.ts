@@ -4,7 +4,7 @@ import { expect, type Locator, type Page } from "@playwright/test";
 export class TextToSpeechPage {
   readonly textInput: Locator;
   readonly generateButton: Locator;
-  readonly playButton: Locator;
+  readonly playerControl: Locator;
   readonly historyTab: Locator;
   readonly history: Locator;
   readonly subscriptionRequired: Locator;
@@ -14,7 +14,9 @@ export class TextToSpeechPage {
   constructor(readonly page: Page) {
     this.textInput = page.getByLabel("Text to speech input");
     this.generateButton = page.getByRole("button", { name: "Generate speech" });
-    this.playButton = page.getByRole("button", { name: "Play" });
+    // "Pause" once autoplay has started, "Play" if the browser blocked it. Either way it
+    // is disabled until the player has loaded the audio.
+    this.playerControl = page.getByRole("button", { name: /^(Play|Pause)$/ });
     this.historyTab = page.getByRole("tab", { name: "History" });
     this.history = page.getByRole("tabpanel", { name: "History" });
     this.subscriptionRequired = page.getByText("Subscription required");
@@ -40,6 +42,11 @@ export class TextToSpeechPage {
 
   async openHistory() {
     await this.historyTab.click();
+  }
+
+  /** The history's entry for a Generation with this text. */
+  historyEntry(text: string): Locator {
+    return this.history.getByText(text);
   }
 
   /** Still on the form, not on a result page. */

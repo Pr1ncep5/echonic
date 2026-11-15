@@ -1,5 +1,6 @@
 import { test as base, expect, type Page } from "@playwright/test";
 
+import { DashboardPage } from "../pages/dashboard-page";
 import { OrgSelectionPage } from "../pages/org-selection-page";
 import { OrganizationSettingsPage } from "../pages/organization-settings-page";
 import { SignInPage } from "../pages/sign-in-page";
@@ -21,6 +22,7 @@ interface Fixtures {
   organizationSettingsPage: OrganizationSettingsPage;
   orgSelectionPage: OrgSelectionPage;
   signInPage: SignInPage;
+  dashboardPage: DashboardPage;
 }
 
 /**
@@ -67,6 +69,9 @@ export const test = base.extend<Fixtures>({
   },
   signInPage: async ({ page }, use) => {
     await use(new SignInPage(page));
+  },
+  dashboardPage: async ({ page }, use) => {
+    await use(new DashboardPage(page));
   },
 });
 

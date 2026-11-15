@@ -67,7 +67,7 @@ These are set once in `playwright.config.ts`. Do not pass a longer timeout to a 
 ## Retries and flaky journeys
 
 - CI retries a failed journey twice; locally there are no retries, so failures show up at once.
-- A journey that passes on retry is reported as flaky. Find the cause (usually a missing wait or shared state) and fix it. Do not raise the retry count, and do not mark it `fixme` without an entry in `TODO.md`.
+- A journey that passes on retry is reported as flaky, and in CI it fails the run (`failOnFlakyTests`), so the report is kept. Find the cause (usually a missing wait or shared state) and fix it. Do not raise the retry count, and do not mark it `fixme` without an entry in `TODO.md`.
 - `test.only` fails the CI run.
 
 ## Screenshots and traces

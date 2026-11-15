@@ -1,3 +1,6 @@
+import { existsSync, readFileSync } from "node:fs";
+import { parse } from "dotenv";
+
 /**
  * Where everything in an end-to-end run lives. The app is built and started on its own
  * port so it can run next to `bun dev`, and talks to the fake server instead of Polar and
@@ -30,26 +33,47 @@ const R2_NAMES = [
   "R2_BUCKET_NAME",
 ] as const;
 
+const R2_FILE = ".env.e2e";
+
+/**
+ * Where the R2 settings come from: the CI secrets in CI, and only .env.e2e anywhere else.
+ * Locally the environment is never consulted, because it can hold the developer's .env
+ * (Bun loads it), and a missing or incomplete .env.e2e would then silently send the
+ * journeys to the development bucket.
+ */
+function r2Source(): { values: Record<string, string | undefined>; fix: string } {
+  if (process.env.CI) {
+    return { values: process.env, fix: "set the E2E_R2_* repository secrets" };
+  }
+  if (!existsSync(R2_FILE)) {
+    throw new Error(
+      `End-to-end tests need the R2 test bucket, and there is no ${R2_FILE}. See e2e/README.md.`,
+    );
+  }
+  return { values: parse(readFileSync(R2_FILE)), fix: `put them in ${R2_FILE}` };
+}
+
 /** The R2 test bucket's settings, or an error naming what is missing. */
-export function r2Env(source: NodeJS.ProcessEnv): Record<(typeof R2_NAMES)[number], string> {
-  const missing = R2_NAMES.filter((name) => !source[name]);
+export function r2Env(): Record<(typeof R2_NAMES)[number], string> {
+  const { values, fix } = r2Source();
+  const missing = R2_NAMES.filter((name) => !values[name]);
   if (missing.length > 0) {
     throw new Error(
-      `End-to-end tests need the R2 test bucket. Missing ${missing.join(", ")}: put them in .env.e2e.`,
+      `End-to-end tests need the R2 test bucket. Missing ${missing.join(", ")}: ${fix}.`,
     );
   }
   return {
-    R2_ACCOUNT_ID: source.R2_ACCOUNT_ID ?? "",
-    R2_ACCESS_KEY_ID: source.R2_ACCESS_KEY_ID ?? "",
-    R2_SECRET_ACCESS_KEY: source.R2_SECRET_ACCESS_KEY ?? "",
-    R2_BUCKET_NAME: source.R2_BUCKET_NAME ?? "",
+    R2_ACCOUNT_ID: values.R2_ACCOUNT_ID ?? "",
+    R2_ACCESS_KEY_ID: values.R2_ACCESS_KEY_ID ?? "",
+    R2_SECRET_ACCESS_KEY: values.R2_SECRET_ACCESS_KEY ?? "",
+    R2_BUCKET_NAME: values.R2_BUCKET_NAME ?? "",
   };
 }
 
 /** The environment the app is built and started with. */
-export function appEnv(source: NodeJS.ProcessEnv): Record<string, string> {
+export function appEnv(): Record<string, string> {
   return {
-    ...r2Env(source),
+    ...r2Env(),
     DATABASE_URL,
 
     BETTER_AUTH_SECRET: AUTH_SECRET,

@@ -10,6 +10,7 @@ test.describe("signing in", () => {
     organization,
     signInPage,
     orgSelectionPage,
+    dashboardPage,
   }) => {
     const password = await givePassword(organization.owner.id);
 
@@ -21,7 +22,7 @@ test.describe("signing in", () => {
     await orgSelectionPage.expectLoaded();
     await orgSelectionPage.choose(organization.name);
 
-    await expect(page.getByRole("heading", { name: "Olivia", level: 1 })).toBeVisible();
+    await expect(dashboardPage.greeting("Olivia")).toBeVisible();
     await expect(page).toHaveURL(/localhost:\d+\/$/);
   });
 });

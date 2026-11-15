@@ -14,7 +14,7 @@ Playwright journeys against the built app. The conventions for writing them are 
 ## Before the first run
 
 1. Docker running, then `bun run test:db`.
-2. A `.env.e2e` file in the repository root with the test bucket's `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET_NAME`. It is not in git. In CI the same values come from the `E2E_R2_*` secrets.
+2. A `.env.e2e` file in the repository root with the test bucket's `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY` and `R2_BUCKET_NAME`. It is not in git. Locally the R2 settings are read only from this file, never from the environment or `.env`, so a missing or incomplete file stops the run instead of sending it to the development bucket. In CI the same values come from the `E2E_R2_*` secrets.
 3. `bunx playwright install chromium`.
 
 ## Running

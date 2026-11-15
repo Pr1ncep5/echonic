@@ -11,7 +11,8 @@ test.describe("generating speech", () => {
     await textToSpeechPage.generate("Hello from the end-to-end tests");
 
     const generationId = await textToSpeechPage.generationId();
-    await expect(textToSpeechPage.playButton).toBeVisible();
+    // Enabled only once the player has loaded the audio.
+    await expect(textToSpeechPage.playerControl).toBeEnabled();
 
     await test.step("the audio is in R2 and comes back through our route", async () => {
       const audio = await page.request.get(`/api/audio/${generationId}`);
@@ -34,9 +35,7 @@ test.describe("generating speech", () => {
     await test.step("it is in the history after a reload", async () => {
       await textToSpeechPage.goto();
       await textToSpeechPage.openHistory();
-      await expect(
-        textToSpeechPage.history.getByText("Hello from the end-to-end tests"),
-      ).toBeVisible();
+      await expect(textToSpeechPage.historyEntry("Hello from the end-to-end tests")).toBeVisible();
     });
   });
 

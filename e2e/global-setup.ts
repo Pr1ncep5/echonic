@@ -34,7 +34,7 @@ export default async function globalSetup() {
 
   execSync("bunx drizzle-kit push --force", {
     stdio: "pipe",
-    env: { ...process.env, ...appEnv(process.env) },
+    env: { ...process.env, ...appEnv() },
   });
 
   await seedSystemVoice();

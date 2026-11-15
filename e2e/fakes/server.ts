@@ -17,7 +17,9 @@ type GenerateBody = paths["/generate"]["post"]["requestBody"]["content"]["applic
 const FAIL_MARKER = "[fail]";
 
 const unsubscribed = new Set<string>();
-const ingestedEvents: unknown[] = [];
+// Keyed by external_id: like Polar, the fake keeps the first delivery and drops repeats.
+// The outbox may deliver a Usage event twice (ADR 0002), and that must bill once.
+const ingestedEvents = new Map<string, unknown>();
 
 function customerState(request: Request, orgId: string): Response {
   if (request.method !== "GET") return new Response(null, { status: 405 });
@@ -58,9 +60,16 @@ async function route(request: Request): Promise<Response> {
   if (state?.[1]) return customerState(request, decodeURIComponent(state[1]));
 
   if (method === "POST" && pathname === "/v1/events/ingest") {
-    const body: { events: unknown[] } = await request.json();
-    ingestedEvents.push(...body.events);
-    return Response.json({ inserted: body.events.length });
+    const body: { events: { external_id: string }[] } = await request.json();
+    let duplicates = 0;
+    for (const event of body.events) {
+      if (ingestedEvents.has(event.external_id)) {
+        duplicates += 1;
+      } else {
+        ingestedEvents.set(event.external_id, event);
+      }
+    }
+    return Response.json({ inserted: body.events.length - duplicates, duplicates });
   }
   if (method === "POST" && pathname === "/v1/checkouts/") {
     return Response.json({ url: `${APP_URL}/?checkout=fake` });
@@ -83,7 +92,7 @@ async function route(request: Request): Promise<Response> {
     return Response.json({ orgId, subscribed: !unsubscribed.has(orgId) });
   }
   // Never cleared: journeys run in parallel and each reads only its own Organization's.
-  if (pathname === "/__test/events") return Response.json(ingestedEvents);
+  if (pathname === "/__test/events") return Response.json([...ingestedEvents.values()]);
   if (pathname === "/__test/health") return new Response("ok");
 
   return Response.json(

@@ -1,12 +1,6 @@
 import { defineConfig, devices } from "@playwright/test";
-import { config as loadEnv } from "dotenv";
 
 import { APP_PORT, APP_URL, FAKE_URL, appEnv } from "./e2e/support/env";
-
-// The R2 test bucket's credentials. In CI they come from secrets instead of this file.
-// `override` so they win even if the developer's .env is already in the environment
-// (Bun loads it): the journeys must never touch the development bucket.
-loadEnv({ path: ".env.e2e", quiet: true, override: true });
 
 const isCI = Boolean(process.env.CI);
 
@@ -21,6 +15,8 @@ export default defineConfig({
   forbidOnly: isCI,
   // A journey that only passes on retry is reported as flaky: fix it, do not raise this.
   retries: isCI ? 2 : 0,
+  // Without this a journey that passes on retry leaves CI green and the report unsaved.
+  failOnFlakyTests: isCI,
   reporter: isCI ? [["github"], ["html", { open: "never" }]] : "list",
   timeout: 60_000,
   expect: { timeout: 10_000 },
@@ -45,7 +41,7 @@ export default defineConfig({
       // Built and started like production, on its own port, so it can run next to `bun dev`.
       command: `bun run build && bun run start --port ${APP_PORT}`,
       url: `${APP_URL}/auth/sign-in`,
-      env: appEnv(process.env),
+      env: appEnv(),
       timeout: 5 * 60 * 1000,
       reuseExistingServer: !isCI,
     },

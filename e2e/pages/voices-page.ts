@@ -32,6 +32,19 @@ export class VoicesPage {
     return this.page.getByRole("button", { name: `Play ${name}` });
   }
 
+  /** The same button while the Voice's sample is playing. */
+  playing(name: string): Locator {
+    return this.page.getByRole("button", { name: `Pause ${name}` });
+  }
+
+  async play(name: string) {
+    await this.voice(name).click();
+  }
+
+  async pause(name: string) {
+    await this.playing(name).click();
+  }
+
   async cloneVoice(name: string, sample: { name: string; mimeType: string; buffer: Buffer }) {
     await this.page.getByRole("button", { name: "Custom voice" }).click();
     // The dropzone's file input is hidden, so it has no role or label to find it by.

@@ -5,7 +5,7 @@ import { r2Env } from "./env";
 
 /** Reads and writes the R2 test bucket directly, to set up and check what the app stored. */
 function bucket() {
-  const r2 = r2Env(process.env);
+  const r2 = r2Env();
   const client = new S3Client({
     region: "auto",
     endpoint: `https://${r2.R2_ACCOUNT_ID}.r2.cloudflarestorage.com`,

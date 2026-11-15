@@ -33,6 +33,14 @@ test.describe("cloning a voice", () => {
       expect(sample.headers()["content-type"]).toBe("audio/wav");
     });
 
+    await test.step("the card's player loads the sample and plays it", async () => {
+      await voicesPage.play(name);
+      // The button only turns into "Pause" once the browser is playing the sample.
+      await expect(voicesPage.playing(name)).toBeVisible();
+      await voicesPage.pause(name);
+      await expect(voicesPage.voice(name)).toBeVisible();
+    });
+
     await test.step("the Organization is billed for it, once", async () => {
       await expect
         .poll(() => polar.usageEvents())
