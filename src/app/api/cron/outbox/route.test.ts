@@ -7,7 +7,7 @@ import { GET } from "./route";
 
 function callCron(authorization?: string) {
   return GET(
-    new Request("http://localhost:3000/api/cron/outbox", {
+    new Request(`${env.APP_URL}/api/cron/outbox`, {
       headers: authorization ? { authorization } : undefined,
     }),
   );

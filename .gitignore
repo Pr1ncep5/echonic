@@ -49,3 +49,8 @@ chatterbox_tts.py
 
 # Sentry Config File
 .env.sentry-build-plugin
+
+# end-to-end tests
+/e2e/.auth
+/test-results
+/playwright-report

@@ -84,9 +84,9 @@ export const fakeChatterbox = { POST: chatterboxPost };
  * Replaces the global `fetch`. The app's only use of it is reading stored audio back from
  * R2, so by default it answers with a small audio body.
  */
-export const fakeFetch = vi.fn<typeof fetch>(
-  async () => new Response("audio", { headers: { "content-type": "audio/wav" } }),
-);
+export const fakeFetch = vi.fn<
+  (input: string | URL | Request, init?: RequestInit) => Promise<Response>
+>(async () => new Response("audio", { headers: { "content-type": "audio/wav" } }));
 
 /** Replaces the functions of `@/lib/r2`; tests reach them with `vi.mocked(uploadAudio)`. */
 export const fakeR2 = {

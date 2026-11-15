@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { fakeFetch } from "@/tests/external";
+import { env } from "./env";
 import { storedAudioResponse } from "./stored-audio-response";
 
 function serve(range?: string) {
-  const request = new Request("http://localhost:3000/api/audio/abc", {
+  const request = new Request(`${env.APP_URL}/api/audio/abc`, {
     headers: range ? { range } : undefined,
   });
   return storedAudioResponse(request, "generations/orgs/org_1/abc", "private, max-age=3600");

@@ -20,6 +20,7 @@ IMPORTANT: Bun only. Never use npm, npx, yarn or pnpm. Use `bunx` for one-off to
 
 - `bun run test:db` — start the test database (Docker, port 5433); `bun run test:db:stop` to remove it
 - `bun run test` — run the tests once; `bun run test:watch` while working
+- `bun run e2e` — build the app and run the Playwright journeys (needs the test database and `.env.e2e` with the R2 test bucket)
 
 ## Tests
 
@@ -32,6 +33,16 @@ Vitest, against a real Postgres. Run `bun run test` together with `bun run check
 - Every test starts with no Subscription and a working Chatterbox. Say otherwise with `givenSubscription`, `givenPolarOutage` or `givenChatterboxFails` from `src/tests/external.ts`.
 - A new rule under "Domain rules" comes with a test named after the rule. Assert on what the caller sees and on the rows left behind, not on which functions were called.
 - No tests for components or for `src/components/ui`.
+
+End-to-end journeys live in `e2e/` and run with Playwright against the built app. Keep them few: one per journey a user would notice breaking, not one per rule (rules belong in Vitest).
+
+IMPORTANT: read `e2e/ARCHITECTURE.md` before adding or changing a journey; `e2e/README.md` covers running and debugging them. The rules that matter most:
+
+- Spec files import `test` and `expect` from `./support/test`, never from `@playwright/test`. Its fixtures give every journey its own Organization and signed-in owner, so journeys run in parallel and must not share state.
+- No selectors in spec files: they live in a page object in `e2e/pages/`, one per route. Find elements by role and label; a test id is the last resort.
+- No `waitForTimeout`. Use web-first assertions and `expect.poll`.
+- The app talks to `e2e/fakes/server.ts` instead of Polar and Chatterbox, and to a real R2 test bucket.
+- `bun run e2e:serve` keeps the built app running so `bun run e2e` starts in seconds while writing a journey.
 
 Lint is oxlint, format is oxfmt. Do not hand-format or argue with them.
 

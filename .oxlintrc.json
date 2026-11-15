@@ -23,6 +23,22 @@
     {
       "files": ["src/instrumentation-client.ts"],
       "rules": { "import/namespace": "off" }
+    },
+    {
+      "files": ["e2e/**/*.spec.ts"],
+      "rules": {
+        "eslint/no-restricted-imports": [
+          "error",
+          {
+            "paths": [
+              {
+                "name": "@playwright/test",
+                "message": "Import test and expect from ./support/test: its fixtures give each journey its own Organization."
+              }
+            ]
+          }
+        ]
+      }
     }
   ],
   "env": {
