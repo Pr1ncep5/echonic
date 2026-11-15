@@ -1,72 +1,70 @@
-import { expect, test } from "@playwright/test";
-
-import { fakePolar } from "./support/fake";
-import { ORGANIZATION } from "./support/seed";
+import { expect, test } from "./support/test";
 
 test.describe("generating speech", () => {
-  test.beforeEach(async () => {
-    await fakePolar.subscribe(ORGANIZATION.id);
-    await fakePolar.clearUsageEvents();
-  });
-
   test("turns text into audio that plays, is kept in the history and is billed once", async ({
     page,
+    organization,
+    polar,
+    textToSpeechPage,
   }) => {
-    await page.goto("/text-to-speech");
-    await page.getByLabel("Text to speech input").fill("Hello from the end-to-end tests");
-    await page.getByRole("button", { name: "Generate speech" }).click();
+    await textToSpeechPage.goto();
+    await textToSpeechPage.generate("Hello from the end-to-end tests");
 
-    await page.waitForURL(/\/text-to-speech\/[a-z0-9]+$/);
-    const generationId = page.url().split("/").at(-1) ?? "";
-    await expect(page.getByRole("button", { name: "Play" })).toBeVisible();
+    const generationId = await textToSpeechPage.generationId();
+    await expect(textToSpeechPage.playButton).toBeVisible();
 
-    // The audio really went to R2 and comes back through our route.
-    const audio = await page.request.get(`/api/audio/${generationId}`);
-    expect(audio.status()).toBe(200);
-    expect(audio.headers()["content-type"]).toBe("audio/wav");
+    await test.step("the audio is in R2 and comes back through our route", async () => {
+      const audio = await page.request.get(`/api/audio/${generationId}`);
+      expect(audio.status()).toBe(200);
+      expect(audio.headers()["content-type"]).toBe("audio/wav");
+    });
 
-    // The Organization was billed for it, once.
-    await expect
-      .poll(async () =>
-        (await fakePolar.usageEvents()).filter((e) => e.external_id === generationId),
-      )
-      .toEqual([
-        expect.objectContaining({
-          name: "tts_generation",
-          external_customer_id: ORGANIZATION.id,
-        }),
-      ]);
+    await test.step("the Organization is billed for it, once", async () => {
+      await expect
+        .poll(() => polar.usageEvents())
+        .toEqual([
+          expect.objectContaining({
+            name: "tts_generation",
+            external_id: generationId,
+            external_customer_id: organization.id,
+          }),
+        ]);
+    });
 
-    // It is in the history after a reload.
-    await page.goto("/text-to-speech");
-    await page.getByRole("tab", { name: "History" }).click();
-    await expect(
-      page.getByRole("tabpanel", { name: "History" }).getByText("Hello from the end-to-end tests"),
-    ).toBeVisible();
+    await test.step("it is in the history after a reload", async () => {
+      await textToSpeechPage.goto();
+      await textToSpeechPage.openHistory();
+      await expect(
+        textToSpeechPage.history.getByText("Hello from the end-to-end tests"),
+      ).toBeVisible();
+    });
   });
 
   test("offers to subscribe when the Organization has no Subscription, and bills nothing", async ({
-    page,
+    polar,
+    textToSpeechPage,
   }) => {
-    await fakePolar.unsubscribe(ORGANIZATION.id);
+    await polar.unsubscribe();
 
-    await page.goto("/text-to-speech");
-    await page.getByLabel("Text to speech input").fill("This should not be generated");
-    await page.getByRole("button", { name: "Generate speech" }).click();
+    await textToSpeechPage.goto();
+    await textToSpeechPage.generate("This should not be generated");
 
-    await expect(page.getByText("Subscription required")).toBeVisible();
-    await expect(page.getByRole("button", { name: "Subscribe" })).toBeVisible();
-    await expect(page).toHaveURL(/\/text-to-speech$/);
-    expect(await fakePolar.usageEvents()).toEqual([]);
+    await expect(textToSpeechPage.subscriptionRequired).toBeVisible();
+    await expect(textToSpeechPage.subscribeButton).toBeVisible();
+    await textToSpeechPage.expectNoResult();
+    expect(await polar.usageEvents()).toEqual([]);
   });
 
-  test("tells the user when speech generation fails, without billing", async ({ page }) => {
-    await page.goto("/text-to-speech");
-    await page.getByLabel("Text to speech input").fill("Please [fail] this one");
-    await page.getByRole("button", { name: "Generate speech" }).click();
+  test("tells the user when speech generation fails, without billing", async ({
+    polar,
+    textToSpeechPage,
+  }) => {
+    await textToSpeechPage.goto();
+    // The fake Chatterbox rejects any text containing this marker.
+    await textToSpeechPage.generate("Please [fail] this one");
 
-    await expect(page.getByText("Speech generation failed. Please try again.")).toBeVisible();
-    await expect(page).toHaveURL(/\/text-to-speech$/);
-    expect(await fakePolar.usageEvents()).toEqual([]);
+    await expect(textToSpeechPage.generationFailed).toBeVisible();
+    await textToSpeechPage.expectNoResult();
+    expect(await polar.usageEvents()).toEqual([]);
   });
 });
