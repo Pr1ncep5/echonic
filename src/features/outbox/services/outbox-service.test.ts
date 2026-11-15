@@ -137,7 +137,11 @@ describe("a side effect that fails is kept and retried later", () => {
   });
 
   it("keeps a task it cannot understand instead of dropping it", async () => {
-    await db.insert(outbox).values({ kind: "USAGE_EVENT", payload: { unexpected: true } });
+    await db.insert(outbox).values({
+      kind: "USAGE_EVENT",
+      payload: { unexpected: true },
+      availableAt: new Date(),
+    });
 
     const result = await drain();
 
